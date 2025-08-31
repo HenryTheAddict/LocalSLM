@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Local AI - Single HTML (with Small Model)</title>
+  <style>
+    :root { --bg:#0e0f13; --fg:#e5e7eb; --mut:#9ca3af; --accent:#7c3aed; --panel:#0b0c10; }
+    *{box-sizing:border-box}
+    html, body { height: 100% }
+    body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.4 system-ui, Segoe UI, Roboto, Helvetica, Arial }
+    .app { display:flex; flex-direction:column; height:100% }
+    .header { position:sticky; top:0; background:linear-gradient(180deg, rgba(0,0,0,.5), transparent); backdrop-filter: blur(8px); padding:12px 12px 8px; border-bottom:1px solid rgba(255,255,255,.06) }
+    .title { font-weight:700 }
+    .sub { font-size:12px; color:var(--mut) }
+    .toolbar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:8px }
+    select, .badge { background:transparent; color:var(--fg); border:1px solid #333; border-radius:10px; padding:6px 10px }
+    .load { background:var(--accent); color:#fff; border:0; border-radius:10px; padding:6px 12px; font-weight:600 }
+    .status { font-size:12px; color:var(--mut); margin-left:auto }
+    .messages { flex:1; overflow:auto; padding:12px 12px 90px }
+    .msg { max-width:90%; padding:10px 12px; border-radius:14px; margin:6px 0; word-wrap:break-word; white-space:pre-wrap }
+    .user { margin-left:auto; background:#1f2937 }
+    .bot { margin-right:auto; background:#111827; border:1px solid #222 }
+    .inputbar { position:fixed; left:0; right:0; bottom:0; padding:10px 12px; background:linear-gradient(0deg, rgba(14,15,19,1), rgba(14,15,19,.85)); border-top:1px solid rgba(255,255,255,.06) }
+    .row { display:flex; gap:8px }
+    #in { flex:1; resize:none; max-height:180px; height:48px; padding:10px; border-radius:10px; border:1px solid #222; background:var(--panel); color:var(--fg); outline:none }
+    .btn { background:var(--accent); border:0; color:#fff; padding:0 14px; border-radius:10px; font-weight:600; min-width:64px }
+    .ctrls { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:6px }
+    .range { accent-color:var(--accent) }
+    .badge { color:var(--mut); font-size:12px }
+    .warning { background:#2a1c1c; border:1px solid #553; color:#f8d7da; padding:8px 10px; border-radius:10px; font-size:13px; margin-top:8px }
+    a { color:#a78bfa }
+    /* Progress bar */
+    .progress { position:relative; display:none; gap:8px; align-items:center; margin-top:8px }
+    .progressTrack { flex:1; background:#1b1d26; border:1px solid #2a2d3a; border-radius:999px; height:10px; overflow:hidden }
+    .progressBar { height:100%; width:0%; background:linear-gradient(90deg, #7c3aed, #a78bfa); border-radius:999px; transition:width .15s ease }
+    .progressText { font-size:12px; color:var(--mut); min-width:52px; text-align:right }
+    /* Logs modal */
+    .logModal { position:fixed; inset:0; display:none; place-items:center; background:rgba(0,0,0,.55); backdrop-filter:blur(6px); padding:16px; z-index:50 }
+    .logPanel { width:min(920px, 96vw); max-height:78vh; background:#0b0c10; border:1px solid #2a2d3a; border-radius:12px; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,.4) }
+    .logHead { display:flex; align-items:center; gap:8px; justify-content:space-between; padding:10px 12px; border-bottom:1px solid #1f2230; background:#0f1117 }
+    .logTitle { font-weight:600 }
+    .logBtns { display:flex; gap:8px }
+    .logBtn { background:#1b1f2b; color:#e5e7eb; border:1px solid #2a2d3a; border-radius:8px; padding:6px 10px; font-size:12px }
+    #logBody { margin:0; padding:12px; font:12px/1.4 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; color:#d1d5db; background:#0b0c10; max-height:64vh; overflow:auto; white-space:pre-wrap }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="header">
+      <div class="title">Local AI</div>
+      <div class="sub">Runs 100% in your browser. Single file. Choose a small model to load (WebGPU) or use the built-in tiny fallback.</div>
+      <div class="toolbar">
+        <label class="badge">Model
+          <select id="modelSel" title="Pick a small model"></select>
+        </label>
+        <button id="loadModel" class="load">Load Model</button>
+        <span id="engineStatus" class="status">Engine: idle</span>
+      </div>
+      <div id="progressWrap" class="progress">
+        <div class="progressTrack"><div id="progressBar" class="progressBar"></div></div>
+        <span id="progressText" class="progressText">0%</span>
+      </div>
+      <div id="gpuWarn" class="warning" style="display:none">WebGPU not available. The built-in tiny fallback will be used. Try Chrome/Edge latest and ensure WebGPU is enabled.</div>
+    </div>
+
+    <div id="msgs" class="messages"></div>
+
+    <div class="inputbar">
+      <div class="row">
+        <textarea id="in" placeholder="Type your message..." autocomplete="off"></textarea>
+        <button id="send" class="btn">Send</button>
+      </div>
+      <div class="ctrls">
+        <label class="badge">Temp <input id="temp" class="range" type="range" min="0" max="2" step="0.1" value="0.9"></label>
+        <button id="clear" class="badge">Clear</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Logs Modal -->
+  <div id="logModal" class="logModal" aria-hidden="true">
+    <div class="logPanel" role="dialog" aria-modal="true" aria-labelledby="logTitle">
+      <div class="logHead">
+        <div id="logTitle" class="logTitle">Logs (Cmd/Ctrl + K to toggle)</div>
+        <div class="logBtns">
+          <button id="clearLogs" class="logBtn">Clear</button>
+          <button id="closeLogs" class="logBtn">Close</button>
+        </div>
+      </div>
+      <pre id="logBody"></pre>
+    </div>
+  </div>
+
+  <!-- Main app (module) -->
+  <script type="module">
+    import * as webllm from "https://esm.run/@mlc-ai/web-llm";
+
+    // --- UI helpers ---
+    const $ = (s) => document.querySelector(s);
+    const msgs = $('#msgs');
+    const input = $('#in');
+    const sendBtn = $('#send');
+    const tempEl = $('#temp');
+    const clearBtn = $('#clear');
+    const modelSel = $('#modelSel');
+    const loadBtn = $('#loadModel');
+    const statusEl = $('#engineStatus');
+    const gpuWarn = $('#gpuWarn');
+    const progressWrap = $('#progressWrap');
+    const progressBar = $('#progressBar');
+    const progressText = $('#progressText');
+    const logModal = $('#logModal');
+    const logBody = $('#logBody');
+    const closeLogs = $('#closeLogs');
+    const clearLogs = $('#clearLogs');
+
+    // Persist chat and settings
+    const LS_CHAT = 'localai_chat_html_v2';
+    const LS_MODEL = 'localai_model_id';
+
+    let busy = false;
+    let history = [ { role: 'system', content: 'You are a concise, helpful AI assistant.' } ];
+
+    // Logging
+    const logs = [];
+    function ts() { const d = new Date(); return d.toLocaleTimeString(); }
+    function log(msg) {
+      const line = `[${ts()}] ${msg}`;
+      logs.push(line);
+      if (logs.length > 2000) logs.shift();
+      if (logModal.style.display !== 'none') renderLogs();
+    }
+    function renderLogs(){ logBody.textContent = logs.join('\n'); logBody.scrollTop = logBody.scrollHeight; }
+    function toggleLogs(force) { const show = force ?? (logModal.style.display === 'none'); logModal.style.display = show ? 'grid' : 'none'; if (show) renderLogs(); }
+
+    function saveChat() {
+      localStorage.setItem(LS_CHAT, JSON.stringify({ html: msgs.innerHTML, history, model: modelSel.value }));
+    }
+    function loadChat() {
+      try {
+        const raw = localStorage.getItem(LS_CHAT);
+        if (!raw) return;
+        const obj = JSON.parse(raw);
+        if (obj?.html) msgs.innerHTML = obj.html;
+        if (Array.isArray(obj?.history)) history = obj.history;
+        if (obj?.model) lastChosenModel = obj.model;
+        msgs.scrollTop = msgs.scrollHeight;
+      } catch {}
+    }
+
+    function add(role, text="") {
+      const d = document.createElement('div');
+      d.className = 'msg ' + (role === 'user' ? 'user' : 'bot');
+      d.textContent = text;
+      msgs.appendChild(d);
+      msgs.scrollTop = msgs.scrollHeight;
+      saveChat();
+      return d;
+    }
+    function setStatus(t) { statusEl.textContent = 'Engine: ' + t; }
+
+    // --- Tiny fallback (Markov + small helpers) ---
+    function pick(a){ return a[Math.floor(Math.random()*a.length)] }
+    function tokenize(t){ return t.toLowerCase().replace(/[^a-z0-9\.\?\!'\-\s]/g,' ').split(/\s+/).filter(Boolean) }
+    function markovBuild(text,n=3){ const toks=tokenize(text),map=new Map(); for(let i=0;i<=toks.length-n;i++){ const key=toks.slice(i,i+n-1).join(' '),next=toks[i+n-1]; if(!map.has(key)) map.set(key,{}); map.get(key)[next]=(map.get(key)[next]||0)+1 } return map }
+    function markovGen(map,seedWords,max=80,temperature=1){ const keys=[...map.keys()]; let seed=null; if(seedWords){ const s=tokenize(seedWords); for(let i=s.length;i>=2;i--){ const k=s.slice(i-2,i).join(' '); if(map.has(k)){ seed=k; break } } } if(!seed) seed=pick(keys); let parts=seed.split(' '),out=[...parts]; for(let i=0;i<max;i++){ const key=out.slice(out.length-2).join(' '),dist=map.get(key)||map.get(pick(keys)); const opts=Object.entries(dist); let tot=0; const arr=opts.map(([w,c])=>{ const val=Math.pow(c,1/Math.max(.05,temperature)); tot+=val; return [w,val] }); let r=Math.random()*tot; let next=''; for(const [w,v] of arr){ if((r-=v)<=0){ next=w; break } } out.push(next); if(/[.!?]/.test(next.slice(-1))&&out.length>8) break } let s=out.join(' '); s=s.replace(/\s([,.!?])/g,'$1'); s=s.replace(/\bi\b/g,'I'); s=s.replace(/(^|\.\s|!\s|\?\s)([a-z])/g,(m,p1,p2)=>p1+p2.toUpperCase()); return s }
+    function calcExpr(s){ if(!/^[\d\.\+\-\*\/\^\(\)\s]+$/.test(s))return null; const ops={'+':1,'-':1,'*':2,'/':2,'^':3},stack=[],out=[]; const toks=s.match(/(\d+\.?\d*|\.\d+|[+\-*\/\^\(\)])/g); if(!toks)return null; for(const t of toks){ if(!isNaN(t))out.push(parseFloat(t)); else if(t in ops){ while(stack.length){ const o=stack[stack.length-1]; if(o in ops&&(ops[o]>ops[t]||(ops[o]==ops[t]&&t!=='^')))out.push(stack.pop()); else break } stack.push(t) } else if(t==='(')stack.push(t); else if(t===')'){ while(stack.length&&stack[stack.length-1]!=='(')out.push(stack.pop()); if(stack.pop()!=='(')return null } } while(stack.length){ const o=stack.pop(); if(!(o in ops))return null; out.push(o) } const st=[]; for(const t of out){ if(typeof t==='number')st.push(t); else{ const b=st.pop(),a=st.pop(); if(a==null||b==null)return null; st.push(t==='+'?a+b:t==='-'?a-b:t==='*'?a*b:t==='/'?a/b:Math.pow(a,b)) } } return st.pop() }
+    const fallbackSeed = "Hello! I'm a tiny local AI that runs in your browser. I can answer simple questions, do small math, and generate text using a tiny Markov model. Privacy-friendly and offline by design.";
+    const fallbackModel = markovBuild(fallbackSeed);
+    function quickIntent(u){ const t=u.toLowerCase(); if(/\b(hi|hello|hey)\b/.test(t)) return "Hi! I'm your local offline AI. How can I help?"; if(/\b(time|what.*time)\b/.test(t)) return "The current time is "+new Date().toLocaleTimeString()+"."; if(/\b(date|day|today)\b/.test(t)) return "Today is "+new Date().toLocaleDateString()+"."; const m=t.match(/(?:calc(?:ulate)?|what(?:'s| is))\s+([0-9\.\+\-\*\/\^\(\)\s]+)/); if(m){ const v=calcExpr(m[1]); if(v!=null) return "Result: "+v } const only=t.match(/^[\s\(]*[0-9\.\+\-\*\/\^\(\)\s]+[\s\)]*$/); if(only){ const v=calcExpr(t); if(v!=null) return "Result: "+v } return null }
+
+    // --- WebLLM Engine ---
+    let engine = null; // MLCEngine
+    let lastChosenModel = localStorage.getItem(LS_MODEL) || '';
+
+    async function populateModels() {
+      try {
+        const list = webllm.prebuiltAppConfig?.model_list || [];
+        modelSel.innerHTML = '';
+        // Prefer smaller models first
+        const sorted = [...list].sort((a,b)=> (a.model_id.includes('0.5B')? -1: a.model_id.includes('1.5B')? -0.5: 0) - (b.model_id.includes('0.5B')? -1: b.model_id.includes('1.5B')? -0.5: 0));
+        for (const rec of sorted.slice(0, 20)) {
+          const opt = document.createElement('option');
+          opt.value = rec.model_id;
+          opt.textContent = rec.model_id;
+          modelSel.appendChild(opt);
+        }
+        // Default to Qwen2 0.5B if present, otherwise first
+        let def = [...modelSel.options].find(o => /qwen.*0\.5b/i.test(o.value))?.value || modelSel.options[0]?.value;
+        if (lastChosenModel && [...modelSel.options].some(o=>o.value===lastChosenModel)) def = lastChosenModel;
+        if (def) modelSel.value = def;
+        log(`Models loaded (${list.length} total). Default: ${modelSel.value}`);
+      } catch (e) {
+        console.warn('Populate models failed', e);
+        log('Populate models failed: ' + (e?.message || e));
+      }
+    }
+
+    function showProgress(show){ progressWrap.style.display = show ? 'flex' : 'none'; }
+    function setProgress(pct, text){ progressBar.style.width = Math.max(0, Math.min(100, pct)) + '%'; progressText.textContent = Math.round(Math.max(0, Math.min(100, pct))) + '%'; if (text) statusEl.textContent = 'Engine: ' + text; }
+
+    async function loadSelectedModel() {
+      const id = modelSel.value;
+      if (!id) return;
+      setStatus('preparing');
+      showProgress(true);
+      setProgress(0, 'preparing');
+      log(`Loading model: ${id}`);
+      try {
+        engine = await webllm.CreateMLCEngine(id, {
+          initProgressCallback: (p) => {
+            try {
+              const frac = typeof p?.progress === 'number' ? p.progress : (typeof p === 'number' ? p : 0);
+              const pct = Math.round(frac * 100);
+              const stage = (p && (p.text || p.stage || p.status)) ? (p.text || p.stage || p.status) : 'loading';
+              setProgress(pct, stage + ` ${pct}%`);
+              log(`Progress: ${pct}% - ${stage}`);
+            } catch {
+              setProgress(0, 'loading');
+            }
+          },
+        });
+        setStatus('ready (' + id + ')');
+        showProgress(false);
+        localStorage.setItem(LS_MODEL, id);
+        log('Model ready: ' + id);
+      } catch (e) {
+        console.error(e);
+        setStatus('failed to load');
+        showProgress(false);
+        add('bot', 'Model failed to load. Using tiny local fallback instead.');
+        log('Model failed to load: ' + (e?.message || e));
+      }
+      saveChat();
+    }
+
+    async function ensureEngine() {
+      if (!navigator.gpu) return null; // no WebGPU
+      if (engine) return engine;
+      await loadSelectedModel();
+      return engine;
+    }
+
+    async function replyLLM(userText) {
+      const t = tempEl.valueAsNumber || 1;
+      const node = add('bot', '');
+      try {
+        const eng = await ensureEngine();
+        if (!eng) {
+          // Fallback
+          log('Using fallback responder');
+          const quick = quickIntent(userText);
+          const resp = quick || markovGen(fallbackModel, userText, 80, t);
+          await typeStream(node, resp);
+          history.push({ role: 'assistant', content: node.textContent });
+          saveChat();
+          return;
+        }
+        // With WebLLM streaming
+        log('Starting streaming response');
+        const chunks = await eng.chat.completions.create({
+          messages: history,
+          temperature: t,
+          stream: true,
+          stream_options: { include_usage: true },
+        });
+        let acc = '';
+        for await (const ch of chunks) {
+          const delta = ch?.choices?.[0]?.delta?.content || '';
+          if (delta) {
+            acc += delta;
+            node.textContent = acc;
+            msgs.scrollTop = msgs.scrollHeight;
+          }
+        }
+        try {
+          const full = await eng.getMessage();
+          node.textContent = full || acc || node.textContent;
+        } catch {}
+        log('Streaming complete');
+        history.push({ role: 'assistant', content: node.textContent });
+        saveChat();
+      } catch (e) {
+        console.error(e);
+        node.textContent = 'There was an error generating a response. Falling back locally.';
+        log('Error during generation, falling back: ' + (e?.message || e));
+        const resp = markovGen(fallbackModel, userText, 80, t);
+        await typeStream(node, resp);
+        history.push({ role: 'assistant', content: node.textContent });
+        saveChat();
+      }
+    }
+
+    async function typeStream(node, text) {
+      node.textContent = '';
+      for (const ch of text) {
+        node.textContent += ch;
+        await new Promise(r=>setTimeout(r, 6 + Math.random()*8));
+        msgs.scrollTop = msgs.scrollHeight;
+      }
+    }
+
+    function onSend(){
+      if (busy) return;
+      const v = (input.value || '').trim();
+      if (!v) return;
+      busy = true;
+      add('user', v);
+      history.push({ role:'user', content: v });
+      log('User: ' + (v.length > 120 ? v.slice(0,120)+'…' : v));
+      input.value = '';
+      replyLLM(v).finally(()=>{ busy=false; saveChat(); });
+    }
+
+    // Events
+    input.addEventListener('keydown', e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); onSend(); }});
+    sendBtn.onclick = onSend;
+    clearBtn.onclick = () => { msgs.innerHTML=''; history = [ history[0] ]; saveChat(); input.focus(); log('Chat cleared'); };
+    loadBtn.onclick = () => loadSelectedModel();
+    closeLogs.onclick = () => toggleLogs(false);
+    clearLogs.onclick = () => { logs.length = 0; renderLogs(); log('Logs cleared'); };
+    document.addEventListener('keydown', (e)=>{
+      const k = e.key?.toLowerCase();
+      if ((e.metaKey || e.ctrlKey) && k === 'k') { e.preventDefault(); toggleLogs(); }
+      if (k === 'escape' && logModal.style.display !== 'none') toggleLogs(false);
+    });
+
+    // Init
+    loadChat();
+    if (!msgs.children.length) add('bot', 'Welcome! Load a small model for stronger replies, or just start chatting to auto-load. If WebGPU is unavailable, I will use a tiny local fallback.');
+
+    if (!('gpu' in navigator)) {
+      gpuWarn.style.display = '';
+      setStatus('unavailable');
+      log('WebGPU unavailable');
+    } else {
+      populateModels().then(()=> { setStatus('idle'); });
+    }
+  </script>
+</body>
+</html>

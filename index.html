@@ -25,6 +25,8 @@
     .row { display:flex; gap:8px }
     #in { flex:1; resize:none; max-height:180px; height:48px; padding:10px; border-radius:10px; border:1px solid #222; background:var(--panel); color:var(--fg); outline:none }
     .btn { background:var(--accent); border:0; color:#fff; padding:0 14px; border-radius:10px; font-weight:600; min-width:60px }
+    .btn.ghost { background:transparent; color:var(--fg); border:1px solid #333 }
+    .btn.muted { background:#374151; color:#e5e7eb }
     .ctrls { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:6px }
     .range { accent-color:var(--accent) }
     .badge { color:var(--mut); font-size:12px }
@@ -62,6 +64,17 @@
     body.light { --bg:#f7f7fb; --fg:#111827; --mut:#4b5563; --panel:#ffffff }
     body.light .user { background:#e5e7eb }
     body.light .bot { background:#f3f4f6; border-color:#e5e7eb }
+    body.light .header { background:linear-gradient(180deg, rgba(255,255,255,.85), transparent); border-bottom:1px solid rgba(0,0,0,.06) }
+    body.light .inputbar { background:linear-gradient(0deg, #ffffff, rgba(255,255,255,.9)); border-top:1px solid rgba(0,0,0,.08) }
+    body.light #in { border-color:#e5e7eb; background:#fff; color:#111827 }
+    body.light select, body.light .badge { border-color:#e5e7eb; color:#111827 }
+    body.light select.nice { background: linear-gradient(180deg, #ffffff, #f7f7fb) }
+    body.light .progressTrack { background:#e5e7eb; border-color:#e5e7eb }
+    body.light .progressText { color:#6b7280 }
+    body.light .logPanel, body.light .creditsPanel { background:#ffffff; border-color:#e5e7eb }
+    body.light .logHead, body.light .creditsHead, body.light .mgrBtns { background:#f3f4f6; border-color:#e5e7eb }
+    body.light .tab { background:#e5e7eb; color:#111827; border-color:#e5e7eb }
+    body.light .tab.active { background:#a78bfa; color:#0b0c10; border-color:#a78bfa }
     .logBtn { background:#1b1f2b; color:#e5e7eb; border:1px solid #2a2d3a; border-radius:8px; padding:6px 10px; font-size:12px }
     #logBody { margin:0; padding:12px; font:12px/1.4 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; color:#d1d5db; background:#0b0c10; max-height:64vh; overflow:auto; white-space:pre-wrap }
     /* Credits modal */
@@ -88,6 +101,7 @@
             <option value="genius">Genius</option>
             <option value="rewriter">reWriter</option>
             <option value="programmer">Programmer</option>
+            <option value="buddy">Buddy</option>
           </select>
         </label>
         <label class="badge accentPreview">Accent <input type="color" id="accentPicker" value="#7c3aed"></label>
@@ -100,6 +114,7 @@
         </label>
         <button id="creditsBtn" class="badge">Credits</button>
         <button id="systemBtn" class="badge">System Prompt</button>
+        <button id="memoryBtn" class="badge">Memory</button>
         <span id="engineStatus" class="status">Engine: idle</span>
       </div>
       <div id="progressWrap" class="progress">
@@ -115,6 +130,8 @@
       <div class="row">
         <textarea id="in" placeholder="Type your message..." autocomplete="off"></textarea>
         <button id="send" class="btn">Send</button>
+        <button id="queue" class="btn ghost" title="Queue this message">Queue</button>
+        <button id="stop" class="btn muted" title="Stop generation">Stop</button>
       </div>
       <div class="ctrls">
         <label class="badge">Temp <input id="temp" class="range" type="range" min="0" max="2" step="0.1" value="0.9"></label>
@@ -188,6 +205,23 @@
       </div>
     </div>
   </div>
+  <!-- Memory Modal -->
+  <div id="memModal" class="creditsModal" aria-hidden="true">
+    <div class="creditsPanel" role="dialog" aria-modal="true" aria-labelledby="memTitle">
+      <div class="creditsHead">
+        <div id="memTitle" class="logTitle">Buddy Memory</div>
+        <button id="closeMem" class="logBtn">Close</button>
+      </div>
+      <div class="creditsBody">
+        <p style="margin-top:0;color:var(--mut)">Edit shared memory (JSON). The assistant can use [tool:memory]{"action":"..."} to modify this.</p>
+        <textarea id="memInput" rows="10" style="width:100%; resize:vertical; padding:10px; border-radius:10px; border:1px solid #2a2d3a; background:#0f1117; color:var(--fg)"></textarea>
+        <label class="badge" style="display:flex;align-items:center;gap:8px;margin-top:8px"><input type="checkbox" id="memInPrompt"> Include memory in system prompt</label>
+        <div class="mgrBtns" style="justify-content:flex-end">
+          <button id="saveMem" class="logBtn">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Main app (module) -->
   <script type="module">
@@ -233,6 +267,14 @@
     const sysInput = $('#sysInput');
     const saveSys = $('#saveSys');
     const closeSys = $('#closeSys');
+    const memoryBtn = $('#memoryBtn');
+    const memModal = $('#memModal');
+    const memInput = $('#memInput');
+    const saveMem = $('#saveMem');
+    const closeMem = $('#closeMem');
+    const memInPromptEl = $('#memInPrompt');
+    const queueBtn = $('#queue');
+    const stopBtn = $('#stop');
     const tokCountEl = $('#tokCount');
     const tpsAvgEl = $('#tpsAvg');
 
@@ -242,9 +284,16 @@
     const LS_DOWNLOADED = 'localai_downloaded_models';
     const LS_SETTINGS = 'localai_settings';
     const LS_SYSTEM = 'localai_system_prompt';
+    const LS_MEMORY = 'localai_buddy_memory';
+    const LS_CUSTOM_MODES = 'localai_custom_modes';
+    const LS_MEMORY_IN_PROMPT = 'localai_memory_in_prompt';
+    const LS_SIMPLE = 'localai_simple_mode';
 
     let busy = false;
+    let stopRequested = false;
+    let requestQueue = [];
     let history = [ { role: 'system', content: 'You are a concise, helpful AI assistant.' } ];
+    let buddyMemory = null;
     let engine = null;
     let lastChosenModel = localStorage.getItem(LS_MODEL) || '';
 
@@ -312,17 +361,31 @@
     function updateSystemPrompt(){
       try {
         const savedCustom = (localStorage.getItem(LS_SYSTEM)||'').trim();
-        if (!promptMode || !promptMode.value) {
-          if (savedCustom) { history[0] = { role:'system', content: savedCustom }; return; }
+        const mode = (promptMode && promptMode.value) || '';
+        const base = 'You are a concise, helpful AI assistant. You may emit internal tool instructions like [tool:settings]{"theme":"light"} or [tool:preview]{"language":"html","code":"..."}, but these must NEVER be shown directly to the user. Silently parse and act on them, then remove any [tool:*]{...} blocks from the visible reply.';
+        let addon = '';
+        if (mode === 'genius') addon = ' Explain deeply, step-by-step, and cover edge cases.';
+        else if (mode === 'rewriter') addon = ' Rewrite user text to be logically correct, spell-checked, and grammatically sound while preserving intent.';
+        else if (mode === 'programmer') addon = ' Generate clean, minimal HTML/CSS/JS. Use a single code block with fences.';
+        else if (mode === 'buddy') addon = ' Act as a warm, supportive friend. Use short, caring messages and remember helpful details.';
+        else {
+          try { const list = JSON.parse(localStorage.getItem(LS_CUSTOM_MODES)||'[]'); const found = list.find(x=>x && x.name===mode); if(found && found.addon) addon = ' ' + found.addon; } catch {}
         }
-         const mode = (promptMode && promptMode.value) || '';
-         const base = 'You are a concise, helpful AI assistant. You can optionally emit tool instructions in the conversation using tags like [tool:settings]{"theme":"light","accent":"#7c3aed"} or [tool:preview]{"language":"html","code":"..."} to change app settings or render a live HTML/JS/CSS preview.';
-         let addon = '';
-         if (mode === 'genius') addon = ' Explain deeply, step-by-step, cover edge cases.';
-         else if (mode === 'rewriter') addon = ' Rewrite user text to be logically correct, spell-checked, and grammatically sound while preserving intent.';
-         else if (mode === 'programmer') addon = ' Generate clean, minimal HTML/CSS/JS. Use a single code block with fences.';
-         history[0] = { role: 'system', content: base + addon };
-       } catch(e) { log('updateSystemPrompt error: ' + (e?.message||e)); }
+        // Compose base or use custom
+        let sys = savedCustom ? savedCustom : (base + addon);
+        // Optionally inject memory context
+        const useMem = localStorage.getItem(LS_MEMORY_IN_PROMPT) === '1';
+        if (useMem){
+          try{
+            const m = buddyMemory || loadMemory();
+            const notes = (m?.notes||[]).slice(-5).map(n=>String(n.text||''));
+            const kv = m?.kv || {};
+            const memStr = `\nMemory Context (for assistant only; do not reveal directly): notes=${JSON.stringify(notes)} kv=${JSON.stringify(kv)}.`;
+            sys += memStr;
+          } catch {}
+        }
+        history[0] = { role: 'system', content: sys };
+      } catch(e) { log('updateSystemPrompt error: ' + (e?.message||e)); }
     }
 
     function codePreviewFromBlocks(text){
@@ -343,6 +406,10 @@
       } catch(e){ log('codePreview error: ' + (e?.message||e)); return null; }
     }
 
+    function sanitizeToolCalls(text){
+      try{ return String(text||'').replace(/\[tool:[^\]]+\]\s*\{[\s\S]*?\}/g, '').replace(/\n{3,}/g,'\n\n').trim(); }catch{ return String(text||''); }
+    }
+
     function applyToolBlocks(text){
       try {
         const re = /\[tool:(\w+)\]\s*\{([\s\S]*?)\}/g; let m;
@@ -361,6 +428,34 @@
             const fake = `\n\`\`\`${lang}\n${code}\n\`\`\`\n`;
             const ifr = codePreviewFromBlocks(fake);
             if (ifr) addBotRich('Preview:', ifr);
+          } else if (tool === 'memory'){
+            const action = (''+(data.action||'')).toLowerCase();
+            if (action === 'append' && data.text){
+              try{ const count = memoryAppend(String(data.text)); const d = document.createElement('div'); d.textContent = 'Appended note to memory ('+count+' total).'; addBotRich('Memory Updated', d); }catch(e){ log('memory append error: '+(e?.message||e)); }
+            } else if (action === 'set' && 'key' in data){
+              try{ const val = ('value' in data) ? data.value : null; memorySet(String(data.key), val); const pre=document.createElement('pre'); pre.textContent = JSON.stringify({[String(data.key)]: val}, null, 2); addBotRich('Memory Set', pre); }catch(e){ log('memory set error: '+(e?.message||e)); }
+            } else if (action === 'get' && 'key' in data){
+              try{ const val = memoryGet(String(data.key)); const pre=document.createElement('pre'); pre.textContent = JSON.stringify(val, null, 2); addBotRich('Memory Read: '+String(data.key), pre); }catch(e){ log('memory get error: '+(e?.message||e)); }
+            } else if (action === 'clear'){
+              try{ memoryClear(); const d=document.createElement('div'); d.textContent='All memory cleared.'; addBotRich('Memory Cleared', d); }catch(e){ log('memory clear error: '+(e?.message||e)); }
+            }
+          } else if (tool === 'mode'){
+            const name = (data.name||'').toString().trim().toLowerCase();
+            const addon = (data.addon||'').toString();
+            if (name){
+              try{
+                ensureModeOption(name, addon);
+                if (promptMode) promptMode.value = name;
+                // persist addon
+                try {
+                  const arr = JSON.parse(localStorage.getItem(LS_CUSTOM_MODES)||'[]');
+                  const i = arr.findIndex(x=>x && x.name===name);
+                  if (addon){ if (i>=0) arr[i].addon = addon; else arr.push({name, addon}); localStorage.setItem(LS_CUSTOM_MODES, JSON.stringify(arr)); }
+                } catch {}
+                updateSystemPrompt();
+                const d = document.createElement('div'); d.textContent = 'Switched to mode: '+name; addBotRich('Mode', d);
+              }catch(e){ log('mode tool error: '+(e?.message||e)); }
+            }
           }
         }
       } catch(e){ log('applyToolBlocks error: ' + (e?.message||e)); }
@@ -394,6 +489,15 @@
     async function loadSelectedModel(){
       const id = modelSel?.value;
       if (!id) return;
+      // If offline, skip trying to fetch remote model shards and fall back gracefully
+      if (typeof navigator !== 'undefined' && navigator && navigator.onLine === false){
+        setStatus('offline');
+        showProgress(false);
+        add('bot', 'You appear to be offline. I will use the tiny local fallback instead.');
+        log('Offline detected: skipping WebLLM model load');
+        saveChat();
+        return;
+      }
       setStatus('preparing');
       showProgress(true);
       setProgress(0, 'preparing');
@@ -419,10 +523,11 @@
         updateModelBadges();
         log('Model ready: ' + id);
       } catch(e){
-        console.error(e);
+        // Avoid noisy stack traces in console; provide friendly fallback
+        // console.error(e);
         setStatus('failed to load');
         showProgress(false);
-        add('bot', 'Model failed to load. Using tiny local fallback instead.');
+        add('bot', 'Model failed to load (likely network/cache). Using tiny local fallback instead.');
         log('Model failed to load: ' + (e?.message||e));
       }
       saveChat();
@@ -440,6 +545,7 @@
       if (tokCountEl) tokCountEl.textContent = '0';
       if (tpsAvgEl) tpsAvgEl.textContent = '0';
       let emitted = 0; const t0 = performance.now();
+      stopRequested = false;
       try{
         const eng = await ensureEngine();
         if (!eng){
@@ -455,6 +561,7 @@
         const chunks = await eng.chat.completions.create({ messages: history, temperature: t, stream: true, stream_options: { include_usage: true } });
         let acc = '';
         for await (const ch of chunks){
+          if (stopRequested) { log('Streaming stopped'); break; }
           const delta = ch?.choices?.[0]?.delta?.content || '';
           if (delta){ acc += delta; node.textContent = acc; msgs.scrollTop = msgs.scrollHeight; }
           const used = ch?.usage?.completion_tokens;
@@ -488,7 +595,7 @@
       log('User: ' + (v.length>120 ? v.slice(0,120)+'…' : v));
       input.value = '';
       updateSystemPrompt();
-      replyLLM(v).finally(()=>{ busy=false; saveChat(); });
+      replyLLM(v).finally(()=>{ busy=false; saveChat(); processQueue(); });
     }
 
     // Settings persistence (theme, accent, language)
@@ -511,6 +618,24 @@
     function loadSettings(){
       try { const raw = localStorage.getItem(LS_SETTINGS); if (!raw) return; const s = JSON.parse(raw); applySettings(s); } catch {}
     }
+
+    // --- Buddy Memory helpers ---
+    function loadMemory(){
+      try{ const raw = localStorage.getItem(LS_MEMORY); const obj = raw ? JSON.parse(raw) : { notes: [], kv: {} }; if(!obj.notes) obj.notes = []; if(!obj.kv) obj.kv = {}; return obj; }catch{ return { notes: [], kv: {} }; }
+    }
+    function saveMemory(){ try{ localStorage.setItem(LS_MEMORY, JSON.stringify(buddyMemory||{notes:[],kv:{}})); }catch(e){ log('saveMemory error: '+(e?.message||e)); } }
+    function memoryAppend(text){ const m = loadMemory(); m.notes.push({ t: Date.now(), text: String(text) }); buddyMemory = m; saveMemory(); return m.notes.length; }
+    function memorySet(key, value){ const m = loadMemory(); if(!m.kv) m.kv={}; m.kv[String(key)] = value; buddyMemory = m; saveMemory(); return true; }
+    function memoryGet(key){ const m = loadMemory(); return m.kv ? m.kv[String(key)] : undefined; }
+    function memoryClear(){ buddyMemory = { notes: [], kv: {} }; saveMemory(); if (memInput) memInput.value = JSON.stringify(buddyMemory, null, 2); }
+
+    // --- Queue helpers ---
+    function updateQueueLabel(){ if (queueBtn) queueBtn.textContent = requestQueue.length ? `Queue (${requestQueue.length})` : 'Queue'; }
+    function enqueue(text){ const v = (text||'').trim(); if(!v) return; requestQueue.push(v); updateQueueLabel(); log('Queued: '+(v.length>120? v.slice(0,120)+'…':v)); processQueue(); }
+    function processQueue(){ if (busy) return; if (!requestQueue.length) { updateQueueLabel(); return; } const v = requestQueue.shift(); updateQueueLabel(); busy = true; add('user', v); history.push({ role:'user', content: v }); updateSystemPrompt(); replyLLM(v).finally(()=>{ busy=false; saveChat(); processQueue(); }); }
+
+    // --- Modes helper ---
+    function ensureModeOption(name, addon){ try{ if(!promptMode) return; const val = String(name||'').toLowerCase(); if(!val) return; const exists = [...promptMode.options].some(o=>o.value===val); if(!exists){ const opt=document.createElement('option'); opt.value = val; opt.textContent = val.charAt(0).toUpperCase()+val.slice(1); promptMode.appendChild(opt); } if (addon){ try{ const arr = JSON.parse(localStorage.getItem(LS_CUSTOM_MODES)||'[]'); const i = arr.findIndex(x=>x && x.name===val); if (i>=0) arr[i].addon = addon; else arr.push({name:val, addon}); localStorage.setItem(LS_CUSTOM_MODES, JSON.stringify(arr)); }catch{} } }catch(e){ log('ensureModeOption error: '+(e?.message||e)); } }
  
      // Downloads/cache helpers
      function getDownloadedSet(){ try{ const arr=JSON.parse(localStorage.getItem(LS_DOWNLOADED)||'[]'); return new Set(arr); }catch{ return new Set(); } }
@@ -563,21 +688,39 @@
      if (systemBtn) systemBtn.onclick = ()=> { const m = document.getElementById('sysModal'); if (m) { const v=(localStorage.getItem(LS_SYSTEM)||''); const t=document.getElementById('sysInput'); if(t) t.value=v; m.style.display='grid'; } };
      if (closeSys) closeSys.onclick = ()=> { const m = document.getElementById('sysModal'); if (m) m.style.display='none'; };
      if (saveSys) saveSys.onclick = ()=> { const t=document.getElementById('sysInput'); const v=t?t.value.trim():''; localStorage.setItem(LS_SYSTEM, v); updateSystemPrompt(); const m=document.getElementById('sysModal'); if(m) m.style.display='none'; log('System prompt saved'); };
- 
-     // Init
+     // Memory modal handlers
+     if (memoryBtn) memoryBtn.onclick = ()=>{ if (memModal) { if (!buddyMemory) buddyMemory = loadMemory(); if (memInput) memInput.value = JSON.stringify(buddyMemory, null, 2); memModal.style.display = 'grid'; } };
+     if (closeMem) closeMem.onclick = ()=>{ if (memModal) memModal.style.display = 'none'; };
+     if (saveMem) saveMem.onclick = ()=>{ try{ if (memInput){ const obj = JSON.parse(memInput.value||'{}'); buddyMemory = obj; saveMemory(); log('Memory saved'); } }catch(e){ log('Save memory error: '+(e?.message||e)); } finally { if (memModal) memModal.style.display='none'; } };
+     // Queue/Stop handlers
+     if (queueBtn) queueBtn.onclick = ()=>{ const v=(input.value||'').trim(); if(!v) return; enqueue(v); input.value=''; };
+     if (stopBtn) stopBtn.onclick = ()=>{ stopRequested = true; log('Stop requested'); };
+     // Memory-in-prompt toggle
+     if (memInPromptEl) {
+       try { memInPromptEl.checked = localStorage.getItem(LS_MEMORY_IN_PROMPT) === '1'; } catch {}
+       memInPromptEl.addEventListener('change', ()=>{ localStorage.setItem(LS_MEMORY_IN_PROMPT, memInPromptEl.checked ? '1' : '0'); updateSystemPrompt(); });
+     }
+     // Simple mode UI toggle and temp warning
+     function applySimpleUI(){ try{ const simple = simpleToggle && simpleToggle.checked; const tempWrap = tempEl && tempEl.parentElement; if (tempWrap) tempWrap.style.display = simple ? 'none' : ''; if (memoryBtn) memoryBtn.style.display = simple ? 'none' : ''; if (systemBtn) systemBtn.style.display = simple ? 'none' : ''; }catch{} }
+     function checkTempWarn(){ try{ const v = (tempEl && !Number.isNaN(tempEl.valueAsNumber)) ? tempEl.valueAsNumber : (parseFloat(tempEl ? tempEl.value : '0')||0); let el = document.getElementById('tempWarn'); if (!el){ el = document.createElement('span'); el.id='tempWarn'; el.className='badge'; el.style.marginLeft='8px'; el.style.color='#ef4444'; el.style.display='none'; el.textContent='High temperature may reduce quality.'; const ctrls=document.querySelector('.ctrls'); if (ctrls){ const anchor=document.getElementById('tokStats'); ctrls.insertBefore(el, anchor || ctrls.lastChild); } } el.style.display = v > 1.25 ? 'inline-flex' : 'none'; }catch{} }
+     if (simpleToggle) simpleToggle.addEventListener('change', ()=>{ try{ localStorage.setItem(LS_SIMPLE, simpleToggle.checked ? '1' : '0'); }catch{} applySimpleUI(); });
+     if (tempEl) tempEl.addEventListener('input', checkTempWarn);
      loadSettings();
      loadChat();
-        // Load custom system prompt if present
-        try { const sp = localStorage.getItem(LS_SYSTEM); if (sp) history[0] = { role:'system', content: sp }; } catch {}
+     // Load custom system prompt if present
+     try { const sp = localStorage.getItem(LS_SYSTEM); if (sp) history[0] = { role:'system', content: sp }; } catch {}
+     // Apply simple mode from storage and adjust UI; initialize temp warning
+     try { const sm = localStorage.getItem(LS_SIMPLE) === '1'; if (simpleToggle) simpleToggle.checked = sm; } catch {}
+     applySimpleUI();
+     checkTempWarn();
      if (!msgs.children.length) add('bot', 'Welcome! Load a small model for stronger replies, or just start chatting to auto-load. If WebGPU is unavailable, I will use a tiny local fallback.');
      adjustPad();
-     if (!('gpu' in navigator)) {
-       gpuWarn.style.display = '';
-       setStatus('unavailable');
-       log('WebGPU unavailable');
-     } else {
-       populateModels().then(()=> { setStatus('idle'); try { updateModelBadges(); } catch {} });
-     }
-  </script>
+     if (!('gpu' in navigator)) { gpuWarn.style.display = 'block'; }
+     populateModels().then(()=>{ updateModelBadges(); }).catch(()=>{});
+     renderDownloads();
+     buddyMemory = loadMemory();
+     updateQueueLabel();
+     adjustPad();
+</script>
 </body>
 </html>

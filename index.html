@@ -21,28 +21,54 @@
     .msg { max-width:90%; padding:10px 12px; border-radius:14px; margin:6px 0; word-wrap:break-word; white-space:pre-wrap }
     .user { margin-left:auto; background:#1f2937 }
     .bot { margin-right:auto; background:#111827; border:1px solid #222 }
-    .inputbar { position:fixed; left:0; right:0; bottom:0; padding:10px 12px; background:linear-gradient(0deg, rgba(14,15,19,1), rgba(14,15,19,.85)); border-top:1px solid rgba(255,255,255,.06) }
+    .inputbar { position:fixed; left:0; right:0; bottom:0; padding:10px 12px; background:linear-gradient(0deg, rgba(14,15,19,1), rgba(14,15,19,.85)); border-top:1px solid rgba(255,255,255,.06); z-index:20 }
     .row { display:flex; gap:8px }
     #in { flex:1; resize:none; max-height:180px; height:48px; padding:10px; border-radius:10px; border:1px solid #222; background:var(--panel); color:var(--fg); outline:none }
-    .btn { background:var(--accent); border:0; color:#fff; padding:0 14px; border-radius:10px; font-weight:600; min-width:64px }
+    .btn { background:var(--accent); border:0; color:#fff; padding:0 14px; border-radius:10px; font-weight:600; min-width:60px }
     .ctrls { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:6px }
     .range { accent-color:var(--accent) }
     .badge { color:var(--mut); font-size:12px }
+    .badge.accentPreview { border-color: var(--accent); color: var(--fg) }
     .warning { background:#2a1c1c; border:1px solid #553; color:#f8d7da; padding:8px 10px; border-radius:10px; font-size:13px; margin-top:8px }
     a { color:#a78bfa }
     /* Progress bar */
     .progress { position:relative; display:none; gap:8px; align-items:center; margin-top:8px }
     .progressTrack { flex:1; background:#1b1d26; border:1px solid #2a2d3a; border-radius:999px; height:10px; overflow:hidden }
-    .progressBar { height:100%; width:0%; background:linear-gradient(90deg, #7c3aed, #a78bfa); border-radius:999px; transition:width .15s ease }
+    .progressBar { height:100%; width:0%; background:linear-gradient(90deg, var(--accent), #a78bfa); border-radius:999px; transition:width .15s ease }
     .progressText { font-size:12px; color:var(--mut); min-width:52px; text-align:right }
-    /* Logs modal */
+    /* Logs/Downloads modal */
     .logModal { position:fixed; inset:0; display:none; place-items:center; background:rgba(0,0,0,.55); backdrop-filter:blur(6px); padding:16px; z-index:50 }
-    .logPanel { width:min(920px, 96vw); max-height:78vh; background:#0b0c10; border:1px solid #2a2d3a; border-radius:12px; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,.4) }
+    .logPanel { width:min(980px, 96vw); max-height:80vh; background:#0b0c10; border:1px solid #2a2d3a; border-radius:12px; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,.4) }
     .logHead { display:flex; align-items:center; gap:8px; justify-content:space-between; padding:10px 12px; border-bottom:1px solid #1f2230; background:#0f1117 }
     .logTitle { font-weight:600 }
-    .logBtns { display:flex; gap:8px }
+    .logBtns { display:flex; gap:8px; align-items:center }
+    .tabs { display:flex; gap:6px; }
+    .tab { background:#1b1f2b; color:#e5e7eb; border:1px solid #2a2d3a; border-radius:8px; padding:6px 10px; font-size:12px; cursor:pointer }
+    .tab.active { background:#a78bfa; color:#0b0c10; border-color:#a78bfa }
+    .panelBody { display:flex; flex-direction:column }
+    #downloadsBody { display:none }
+    #logsBody { display:none }
+    #downloadsList { padding:12px; max-height:60vh; overflow:auto }
+    .downloadItem { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 10px; border-bottom:1px solid #1f2230; font-size:13px }
+    .delBtn { background:#2b1b1b; color:#fca5a5; border:1px solid #523; padding:4px 8px; border-radius:8px; font-size:12px }
+    .mgrBtns { display:flex; gap:8px; padding:8px 12px; border-top:1px solid #1f2230; background:#0f1117 }
+    .switch { display:inline-flex; align-items:center; gap:6px; padding:4px 8px; border-radius:10px; border:1px solid #333; user-select:none }
+    .switch input { appearance:none; width:34px; height:20px; background:#222; border-radius:999px; position:relative; outline:none; cursor:pointer; border:1px solid #333 }
+    .switch input:checked { background:#4ade80; border-color:#4ade80 }
+    .switch input::after { content:''; position:absolute; top:2px; left:2px; width:16px; height:16px; background:#fff; border-radius:50%; transition:left .2s ease }
+    .switch input:checked::after { left:16px }
+    select.nice { appearance:none; background:linear-gradient(180deg,#0f1117,#0b0c10); padding-right:26px; position:relative }
+    /* Light theme */
+    body.light { --bg:#f7f7fb; --fg:#111827; --mut:#4b5563; --panel:#ffffff }
+    body.light .user { background:#e5e7eb }
+    body.light .bot { background:#f3f4f6; border-color:#e5e7eb }
     .logBtn { background:#1b1f2b; color:#e5e7eb; border:1px solid #2a2d3a; border-radius:8px; padding:6px 10px; font-size:12px }
     #logBody { margin:0; padding:12px; font:12px/1.4 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; color:#d1d5db; background:#0b0c10; max-height:64vh; overflow:auto; white-space:pre-wrap }
+    /* Credits modal */
+    .creditsModal { position:fixed; inset:0; display:none; place-items:center; background:rgba(0,0,0,.55); backdrop-filter:blur(6px); padding:16px; z-index:60 }
+    .creditsPanel { width:min(560px, 94vw); background:#0b0c10; border:1px solid #2a2d3a; border-radius:12px; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,.4) }
+    .creditsHead { display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-bottom:1px solid #1f2230; background:#0f1117 }
+    .creditsBody { padding:12px; color:var(--fg); font-size:14px }
   </style>
 </head>
 <body>
@@ -52,9 +78,28 @@
       <div class="sub">Runs 100% in your browser. Single file. Choose a small model to load (WebGPU) or use the built-in tiny fallback.</div>
       <div class="toolbar">
         <label class="badge">Model
-          <select id="modelSel" title="Pick a small model"></select>
+          <select id="modelSel" class="nice" title="Pick a small model"></select>
         </label>
         <button id="loadModel" class="load">Load Model</button>
+        <label class="switch"><input type="checkbox" id="simpleToggle"><span>Simple</span></label>
+        <label class="badge">Mode
+          <select id="promptMode" class="nice">
+            <option value="">None</option>
+            <option value="genius">Genius</option>
+            <option value="rewriter">reWriter</option>
+            <option value="programmer">Programmer</option>
+          </select>
+        </label>
+        <label class="badge accentPreview">Accent <input type="color" id="accentPicker" value="#7c3aed"></label>
+        <button id="themeToggle" class="badge">Theme: Dark</button>
+        <label class="badge">Lang
+          <select id="langSel" class="nice">
+            <option value="en">EN</option>
+            <option value="es">ES</option>
+          </select>
+        </label>
+        <button id="creditsBtn" class="badge">Credits</button>
+        <button id="systemBtn" class="badge">System Prompt</button>
         <span id="engineStatus" class="status">Engine: idle</span>
       </div>
       <div id="progressWrap" class="progress">
@@ -73,6 +118,7 @@
       </div>
       <div class="ctrls">
         <label class="badge">Temp <input id="temp" class="range" type="range" min="0" max="2" step="0.1" value="0.9"></label>
+        <span id="tokStats" class="badge">Tokens: <span id="tokCount">0</span> • TPS: <span id="tpsAvg">0</span></span>
         <button id="clear" class="badge">Clear</button>
       </div>
     </div>
@@ -82,13 +128,64 @@
   <div id="logModal" class="logModal" aria-hidden="true">
     <div class="logPanel" role="dialog" aria-modal="true" aria-labelledby="logTitle">
       <div class="logHead">
-        <div id="logTitle" class="logTitle">Logs (Cmd/Ctrl + K to toggle)</div>
+        <div id="logTitle" class="logTitle">Command Center</div>
         <div class="logBtns">
-          <button id="clearLogs" class="logBtn">Clear</button>
+          <div class="tabs">
+            <button id="tabDownloads" class="tab active">Downloads</button>
+            <button id="tabLogs" class="tab">Logs</button>
+          </div>
           <button id="closeLogs" class="logBtn">Close</button>
         </div>
       </div>
-      <pre id="logBody"></pre>
+      <div id="downloadsBody" class="panelBody" style="display:block">
+        <div id="downloadsList"></div>
+        <div class="mgrBtns">
+          <button id="refreshDownloads" class="logBtn">Refresh</button>
+          <button id="clearAllCaches" class="logBtn">Clear All Caches (Try)</button>
+          <button id="clearDownloadsTrack" class="logBtn">Clear Downloaded List</button>
+        </div>
+      </div>
+      <div id="logsBody" class="panelBody">
+        <pre id="logBody"></pre>
+        <div class="mgrBtns">
+          <button id="clearLogs" class="logBtn">Clear Logs</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Credits Modal -->
+  <div id="creditsModal" class="creditsModal" aria-hidden="true">
+    <div class="creditsPanel" role="dialog" aria-modal="true" aria-labelledby="creditsTitle">
+      <div class="creditsHead">
+        <div id="creditsTitle" class="logTitle">Credits</div>
+        <button id="closeCredits" class="logBtn">Close</button>
+      </div>
+      <div class="creditsBody">
+        <p><strong>Local AI (Single HTML)</strong></p>
+        <p>Powered by WebLLM running fully in your browser with WebGPU acceleration when available.</p>
+        <ul>
+          <li>WebLLM by MLC AI</li>
+          <li>Design and integration by you</li>
+          <li>Built with plain HTML/CSS/JS, optimized for desktop and mobile</li>
+        </ul>
+        <p>Thank you for trying this demo!</p>
+      </div>
+    </div>
+  </div>
+  <!-- System Prompt Modal -->
+  <div id="sysModal" class="creditsModal" aria-hidden="true">
+    <div class="creditsPanel" role="dialog" aria-modal="true" aria-labelledby="sysTitle">
+      <div class="creditsHead">
+        <div id="sysTitle" class="logTitle">Edit System Prompt</div>
+        <button id="closeSys" class="logBtn">Close</button>
+      </div>
+      <div class="creditsBody">
+        <textarea id="sysInput" rows="8" style="width:100%; resize:vertical; padding:10px; border-radius:10px; border:1px solid #2a2d3a; background:#0f1117; color:var(--fg)" placeholder="Enter a custom system prompt..."></textarea>
+        <div class="mgrBtns" style="justify-content:flex-end">
+          <button id="saveSys" class="logBtn">Save</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -114,13 +211,42 @@
     const logBody = $('#logBody');
     const closeLogs = $('#closeLogs');
     const clearLogs = $('#clearLogs');
+    const tabDownloads = $('#tabDownloads');
+    const tabLogs = $('#tabLogs');
+    const downloadsBody = $('#downloadsBody');
+    const logsBody = $('#logsBody');
+    const downloadsList = $('#downloadsList');
+    const refreshDownloads = $('#refreshDownloads');
+    const clearAllCaches = $('#clearAllCaches');
+    const clearDownloadsTrack = $('#clearDownloadsTrack');
+    const simpleToggle = $('#simpleToggle');
+    const promptMode = $('#promptMode');
+    const themeToggle = $('#themeToggle');
+    const accentPicker = $('#accentPicker');
+    const langSel = $('#langSel');
+    const inputbar = document.querySelector('.inputbar');
+    const creditsBtn = $('#creditsBtn');
+    const creditsModal = $('#creditsModal');
+    const closeCredits = $('#closeCredits');
+    const systemBtn = $('#systemBtn');
+    const sysModal = $('#sysModal');
+    const sysInput = $('#sysInput');
+    const saveSys = $('#saveSys');
+    const closeSys = $('#closeSys');
+    const tokCountEl = $('#tokCount');
+    const tpsAvgEl = $('#tpsAvg');
 
     // Persist chat and settings
     const LS_CHAT = 'localai_chat_html_v2';
     const LS_MODEL = 'localai_model_id';
+    const LS_DOWNLOADED = 'localai_downloaded_models';
+    const LS_SETTINGS = 'localai_settings';
+    const LS_SYSTEM = 'localai_system_prompt';
 
     let busy = false;
     let history = [ { role: 'system', content: 'You are a concise, helpful AI assistant.' } ];
+    let engine = null;
+    let lastChosenModel = localStorage.getItem(LS_MODEL) || '';
 
     // Logging
     const logs = [];
@@ -132,7 +258,9 @@
       if (logModal.style.display !== 'none') renderLogs();
     }
     function renderLogs(){ logBody.textContent = logs.join('\n'); logBody.scrollTop = logBody.scrollHeight; }
-    function toggleLogs(force) { const show = force ?? (logModal.style.display === 'none'); logModal.style.display = show ? 'grid' : 'none'; if (show) renderLogs(); }
+    function toggleLogs(force) { const show = force ?? (logModal.style.display === 'none'); logModal.style.display = show ? 'grid' : 'none'; if (show) { setActiveTab(activeTab); renderLogs(); renderDownloads(); } }
+    let activeTab = 'downloads';
+    function setActiveTab(name){ activeTab = name; if(name==='downloads'){ tabDownloads.classList.add('active'); tabLogs.classList.remove('active'); downloadsBody.style.display='block'; logsBody.style.display='none'; } else { tabLogs.classList.add('active'); tabDownloads.classList.remove('active'); downloadsBody.style.display='none'; logsBody.style.display='block'; } }
 
     function saveChat() {
       localStorage.setItem(LS_CHAT, JSON.stringify({ html: msgs.innerHTML, history, model: modelSel.value }));
@@ -158,6 +286,16 @@
       saveChat();
       return d;
     }
+    function addBotRich(text, preview){
+      const d = document.createElement('div');
+      d.className = 'msg bot';
+      const p = document.createElement('div'); p.textContent = text; d.appendChild(p);
+      if (preview) d.appendChild(preview);
+      msgs.appendChild(d);
+      msgs.scrollTop = msgs.scrollHeight;
+      saveChat();
+      return d;
+    }
     function setStatus(t) { statusEl.textContent = 'Engine: ' + t; }
 
     // --- Tiny fallback (Markov + small helpers) ---
@@ -170,173 +308,276 @@
     const fallbackModel = markovBuild(fallbackSeed);
     function quickIntent(u){ const t=u.toLowerCase(); if(/\b(hi|hello|hey)\b/.test(t)) return "Hi! I'm your local offline AI. How can I help?"; if(/\b(time|what.*time)\b/.test(t)) return "The current time is "+new Date().toLocaleTimeString()+"."; if(/\b(date|day|today)\b/.test(t)) return "Today is "+new Date().toLocaleDateString()+"."; const m=t.match(/(?:calc(?:ulate)?|what(?:'s| is))\s+([0-9\.\+\-\*\/\^\(\)\s]+)/); if(m){ const v=calcExpr(m[1]); if(v!=null) return "Result: "+v } const only=t.match(/^[\s\(]*[0-9\.\+\-\*\/\^\(\)\s]+[\s\)]*$/); if(only){ const v=calcExpr(t); if(v!=null) return "Result: "+v } return null }
 
-    // --- WebLLM Engine ---
-    let engine = null; // MLCEngine
-    let lastChosenModel = localStorage.getItem(LS_MODEL) || '';
+    // --- Added helpers to prevent ReferenceError and enable features ---
+    function updateSystemPrompt(){
+      try {
+        const savedCustom = (localStorage.getItem(LS_SYSTEM)||'').trim();
+        if (!promptMode || !promptMode.value) {
+          if (savedCustom) { history[0] = { role:'system', content: savedCustom }; return; }
+        }
+         const mode = (promptMode && promptMode.value) || '';
+         const base = 'You are a concise, helpful AI assistant. You can optionally emit tool instructions in the conversation using tags like [tool:settings]{"theme":"light","accent":"#7c3aed"} or [tool:preview]{"language":"html","code":"..."} to change app settings or render a live HTML/JS/CSS preview.';
+         let addon = '';
+         if (mode === 'genius') addon = ' Explain deeply, step-by-step, cover edge cases.';
+         else if (mode === 'rewriter') addon = ' Rewrite user text to be logically correct, spell-checked, and grammatically sound while preserving intent.';
+         else if (mode === 'programmer') addon = ' Generate clean, minimal HTML/CSS/JS. Use a single code block with fences.';
+         history[0] = { role: 'system', content: base + addon };
+       } catch(e) { log('updateSystemPrompt error: ' + (e?.message||e)); }
+    }
 
+    function codePreviewFromBlocks(text){
+      try {
+        const m = text.match(/```(html|javascript|js|css)\n([\s\S]*?)```/i);
+        if (!m) return null;
+        const lang = m[1].toLowerCase();
+        const code = m[2];
+        const iframe = document.createElement('iframe');
+        iframe.style.width='100%'; iframe.style.height='260px'; iframe.style.border='1px solid #1f2230'; iframe.style.borderRadius='10px';
+        iframe.setAttribute('sandbox','allow-scripts');
+        let srcdoc='';
+        if (lang==='html') srcdoc = code;
+        else if (lang==='css') srcdoc = `<style>${code}</style><div style="padding:12px;font-family:system-ui">CSS Preview</div>`;
+        else srcdoc = `<!doctype html><meta charset="utf-8"><style>body{font-family:system-ui;padding:12px}</style><div>JS Preview</div><script>${code}<\/script>`;
+        iframe.srcdoc = srcdoc;
+        return iframe;
+      } catch(e){ log('codePreview error: ' + (e?.message||e)); return null; }
+    }
+
+    function applyToolBlocks(text){
+      try {
+        const re = /\[tool:(\w+)\]\s*\{([\s\S]*?)\}/g; let m;
+        while ((m = re.exec(text))){
+          const tool = m[1].toLowerCase();
+          const jsonStr = '{' + m[2] + '}';
+          let data = {};
+          try { data = JSON.parse(jsonStr); } catch(e){ log('Tool JSON parse error'); continue; }
+          if (tool === 'settings'){
+            if (data.theme){ document.body.classList.toggle('light', (''+data.theme).toLowerCase().includes('light')); }
+            if (data.accent){ document.documentElement.style.setProperty('--accent', data.accent); }
+            if (data.language){ /* placeholder: could localize */ }
+          } else if (tool === 'preview'){
+            const lang = (''+(data.language||'html')).toLowerCase();
+            const code = ''+(data.code||'');
+            const fake = `\n\`\`\`${lang}\n${code}\n\`\`\`\n`;
+            const ifr = codePreviewFromBlocks(fake);
+            if (ifr) addBotRich('Preview:', ifr);
+          }
+        }
+      } catch(e){ log('applyToolBlocks error: ' + (e?.message||e)); }
+    }
+    
+    // --- WebLLM Engine ---
+    function showProgress(show){ if (progressWrap) progressWrap.style.display = show ? 'flex' : 'none'; }
+    function setProgress(pct, text){ if(progressBar){ progressBar.style.width = Math.max(0, Math.min(100, pct)) + '%'; } if(progressText){ progressText.textContent = Math.round(Math.max(0, Math.min(100, pct))) + '%'; } if (text && statusEl) statusEl.textContent = 'Engine: ' + text; }
     async function populateModels() {
       try {
-        const list = webllm.prebuiltAppConfig?.model_list || [];
+        const list = (webllm?.prebuiltAppConfig?.model_list) || [];
         modelSel.innerHTML = '';
-        // Prefer smaller models first
-        const sorted = [...list].sort((a,b)=> (a.model_id.includes('0.5B')? -1: a.model_id.includes('1.5B')? -0.5: 0) - (b.model_id.includes('0.5B')? -1: b.model_id.includes('1.5B')? -0.5: 0));
-        for (const rec of sorted.slice(0, 20)) {
+        const sorted = [...list].sort((a,b)=>{
+          const wa = a.model_id.toLowerCase();
+          const wb = b.model_id.toLowerCase();
+          const ra = wa.includes('0.5b') ? 0 : wa.includes('1.5b') ? 1 : 2;
+          const rb = wb.includes('0.5b') ? 0 : wb.includes('1.5b') ? 1 : 2;
+          return ra - rb;
+        });
+        for (const rec of sorted.slice(0, 40)){
           const opt = document.createElement('option');
-          opt.value = rec.model_id;
-          opt.textContent = rec.model_id;
+          opt.value = rec.model_id; opt.textContent = rec.model_id;
           modelSel.appendChild(opt);
         }
-        // Default to Qwen2 0.5B if present, otherwise first
-        let def = [...modelSel.options].find(o => /qwen.*0\.5b/i.test(o.value))?.value || modelSel.options[0]?.value;
+        let def = [...modelSel.options].find(o=>/qwen.*0\.5b/i.test(o.value))?.value || modelSel.options[0]?.value;
         if (lastChosenModel && [...modelSel.options].some(o=>o.value===lastChosenModel)) def = lastChosenModel;
         if (def) modelSel.value = def;
         log(`Models loaded (${list.length} total). Default: ${modelSel.value}`);
-      } catch (e) {
-        console.warn('Populate models failed', e);
-        log('Populate models failed: ' + (e?.message || e));
-      }
+      } catch(e){ log('Populate models failed: ' + (e?.message||e)); }
     }
-
-    function showProgress(show){ progressWrap.style.display = show ? 'flex' : 'none'; }
-    function setProgress(pct, text){ progressBar.style.width = Math.max(0, Math.min(100, pct)) + '%'; progressText.textContent = Math.round(Math.max(0, Math.min(100, pct))) + '%'; if (text) statusEl.textContent = 'Engine: ' + text; }
-
-    async function loadSelectedModel() {
-      const id = modelSel.value;
+    async function loadSelectedModel(){
+      const id = modelSel?.value;
       if (!id) return;
       setStatus('preparing');
       showProgress(true);
       setProgress(0, 'preparing');
-      log(`Loading model: ${id}`);
+      log('Loading model: ' + id);
       try {
         engine = await webllm.CreateMLCEngine(id, {
-          initProgressCallback: (p) => {
-            try {
+          initProgressCallback: (p)=>{
+            try{
               const frac = typeof p?.progress === 'number' ? p.progress : (typeof p === 'number' ? p : 0);
               const pct = Math.round(frac * 100);
               const stage = (p && (p.text || p.stage || p.status)) ? (p.text || p.stage || p.status) : 'loading';
-              setProgress(pct, stage + ` ${pct}%`);
+              setProgress(pct, `${stage} ${pct}%`);
               log(`Progress: ${pct}% - ${stage}`);
-            } catch {
-              setProgress(0, 'loading');
-            }
-          },
+            }catch{ setProgress(0, 'loading'); }
+          }
         });
         setStatus('ready (' + id + ')');
         showProgress(false);
         localStorage.setItem(LS_MODEL, id);
+        lastChosenModel = id;
+        markDownloaded(id);
+        renderDownloads();
+        updateModelBadges();
         log('Model ready: ' + id);
-      } catch (e) {
+      } catch(e){
         console.error(e);
         setStatus('failed to load');
         showProgress(false);
         add('bot', 'Model failed to load. Using tiny local fallback instead.');
-        log('Model failed to load: ' + (e?.message || e));
+        log('Model failed to load: ' + (e?.message||e));
       }
       saveChat();
     }
-
-    async function ensureEngine() {
-      if (!navigator.gpu) return null; // no WebGPU
+    async function ensureEngine(){
+      if (!('gpu' in navigator)) return null;
       if (engine) return engine;
       await loadSelectedModel();
       return engine;
     }
-
-    async function replyLLM(userText) {
-      const t = tempEl.valueAsNumber || 1;
+    async function replyLLM(userText){
+      const t = ((tempEl && !Number.isNaN(tempEl.valueAsNumber)) ? tempEl.valueAsNumber : (parseFloat(tempEl ? tempEl.value : '1') || 1));
       const node = add('bot', '');
-      try {
+      // reset token stats
+      if (tokCountEl) tokCountEl.textContent = '0';
+      if (tpsAvgEl) tpsAvgEl.textContent = '0';
+      let emitted = 0; const t0 = performance.now();
+      try{
         const eng = await ensureEngine();
-        if (!eng) {
-          // Fallback
+        if (!eng){
           log('Using fallback responder');
           const quick = quickIntent(userText);
           const resp = quick || markovGen(fallbackModel, userText, 80, t);
           await typeStream(node, resp);
-          history.push({ role: 'assistant', content: node.textContent });
+          history.push({ role:'assistant', content: node.textContent });
           saveChat();
           return;
         }
-        // With WebLLM streaming
         log('Starting streaming response');
-        const chunks = await eng.chat.completions.create({
-          messages: history,
-          temperature: t,
-          stream: true,
-          stream_options: { include_usage: true },
-        });
+        const chunks = await eng.chat.completions.create({ messages: history, temperature: t, stream: true, stream_options: { include_usage: true } });
         let acc = '';
-        for await (const ch of chunks) {
+        for await (const ch of chunks){
           const delta = ch?.choices?.[0]?.delta?.content || '';
-          if (delta) {
-            acc += delta;
-            node.textContent = acc;
-            msgs.scrollTop = msgs.scrollHeight;
-          }
+          if (delta){ acc += delta; node.textContent = acc; msgs.scrollTop = msgs.scrollHeight; }
+          const used = ch?.usage?.completion_tokens;
+          if (typeof used === 'number') emitted = used; else if (delta) emitted += Math.max(1, Math.round(delta.length/4));
+          const dt = Math.max(1, (performance.now()-t0)/1000);
+          if (tokCountEl) tokCountEl.textContent = String(emitted);
+          if (tpsAvgEl) tpsAvgEl.textContent = (emitted/dt).toFixed(1);
         }
-        try {
-          const full = await eng.getMessage();
-          node.textContent = full || acc || node.textContent;
-        } catch {}
-        log('Streaming complete');
-        history.push({ role: 'assistant', content: node.textContent });
+        applyToolBlocks(node.textContent);
+        const pv = codePreviewFromBlocks(node.textContent); if (pv) addBotRich('Preview:', pv);
+        history.push({ role:'assistant', content: node.textContent });
         saveChat();
-      } catch (e) {
+      } catch(e){
         console.error(e);
         node.textContent = 'There was an error generating a response. Falling back locally.';
-        log('Error during generation, falling back: ' + (e?.message || e));
+        log('Error during generation, falling back: ' + (e?.message||e));
         const resp = markovGen(fallbackModel, userText, 80, t);
         await typeStream(node, resp);
-        history.push({ role: 'assistant', content: node.textContent });
+        history.push({ role:'assistant', content: node.textContent });
         saveChat();
       }
     }
-
-    async function typeStream(node, text) {
-      node.textContent = '';
-      for (const ch of text) {
-        node.textContent += ch;
-        await new Promise(r=>setTimeout(r, 6 + Math.random()*8));
-        msgs.scrollTop = msgs.scrollHeight;
-      }
-    }
-
+    async function typeStream(node, text){ node.textContent = ''; for (const ch of text){ node.textContent += ch; await new Promise(r=>setTimeout(r, 6 + Math.random()*8)); msgs.scrollTop = msgs.scrollHeight; } }
     function onSend(){
       if (busy) return;
-      const v = (input.value || '').trim();
+      const v = (input.value||'').trim();
       if (!v) return;
       busy = true;
       add('user', v);
       history.push({ role:'user', content: v });
-      log('User: ' + (v.length > 120 ? v.slice(0,120)+'…' : v));
+      log('User: ' + (v.length>120 ? v.slice(0,120)+'…' : v));
       input.value = '';
+      updateSystemPrompt();
       replyLLM(v).finally(()=>{ busy=false; saveChat(); });
     }
 
-    // Events
-    input.addEventListener('keydown', e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); onSend(); }});
-    sendBtn.onclick = onSend;
-    clearBtn.onclick = () => { msgs.innerHTML=''; history = [ history[0] ]; saveChat(); input.focus(); log('Chat cleared'); };
-    loadBtn.onclick = () => loadSelectedModel();
-    closeLogs.onclick = () => toggleLogs(false);
-    clearLogs.onclick = () => { logs.length = 0; renderLogs(); log('Logs cleared'); };
-    document.addEventListener('keydown', (e)=>{
-      const k = e.key?.toLowerCase();
-      if ((e.metaKey || e.ctrlKey) && k === 'k') { e.preventDefault(); toggleLogs(); }
-      if (k === 'escape' && logModal.style.display !== 'none') toggleLogs(false);
-    });
-
-    // Init
-    loadChat();
-    if (!msgs.children.length) add('bot', 'Welcome! Load a small model for stronger replies, or just start chatting to auto-load. If WebGPU is unavailable, I will use a tiny local fallback.');
-
-    if (!('gpu' in navigator)) {
-      gpuWarn.style.display = '';
-      setStatus('unavailable');
-      log('WebGPU unavailable');
-    } else {
-      populateModels().then(()=> { setStatus('idle'); });
+    // Settings persistence (theme, accent, language)
+    function applySettings(s){
+      if (!s) return;
+      if (typeof s.light === 'boolean') document.body.classList.toggle('light', s.light);
+      if (s.accent) document.documentElement.style.setProperty('--accent', s.accent);
+      if (s.language && langSel) langSel.value = s.language;
+      if (themeToggle) themeToggle.textContent = 'Theme: ' + (document.body.classList.contains('light') ? 'Light' : 'Dark');
+      if (accentPicker && s.accent) accentPicker.value = s.accent;
     }
+    function saveSettings(){
+      const s = {
+        light: document.body.classList.contains('light'),
+        accent: accentPicker ? accentPicker.value : '#7c3aed',
+        language: langSel ? langSel.value : 'en'
+      };
+      localStorage.setItem(LS_SETTINGS, JSON.stringify(s));
+    }
+    function loadSettings(){
+      try { const raw = localStorage.getItem(LS_SETTINGS); if (!raw) return; const s = JSON.parse(raw); applySettings(s); } catch {}
+    }
+ 
+     // Downloads/cache helpers
+     function getDownloadedSet(){ try{ const arr=JSON.parse(localStorage.getItem(LS_DOWNLOADED)||'[]'); return new Set(arr); }catch{ return new Set(); } }
+     function setDownloadedSet(s){ localStorage.setItem(LS_DOWNLOADED, JSON.stringify([...s])); }
+     function markDownloaded(id){ const s=getDownloadedSet(); s.add(id); setDownloadedSet(s); }
+     function renderDownloads(){ if(!downloadsList) return; const s=getDownloadedSet(); downloadsList.innerHTML=''; if(!s.size){ const d=document.createElement('div'); d.style.padding='12px'; d.textContent='No downloaded models tracked yet.'; downloadsList.appendChild(d); return; } [...s].forEach(id=>{ const row=document.createElement('div'); row.className='downloadItem'; const left=document.createElement('div'); left.textContent=id; const del=document.createElement('button'); del.className='delBtn'; del.textContent='Delete'; del.onclick=()=> deleteDownloadedModel(id); row.append(left, del); downloadsList.appendChild(row); }); }
+     async function deleteDownloadedModel(id){ try{ const s=getDownloadedSet(); s.delete(id); setDownloadedSet(s); renderDownloads(); log('Deleted tracked model: '+id+' (cache removal best-effort)'); }catch(e){ log('Delete error: '+(e?.message||e)); } }
+     async function clearAllModelCachesFn(){ log('Attempting to clear WebLLM caches'); try{ if (indexedDB.databases){ const dbs=await indexedDB.databases(); for(const db of dbs){ const name=db.name||''; if(name && (name.startsWith('mlc') || name.toLowerCase().includes('webllm'))){ await new Promise(res=>{ const rq=indexedDB.deleteDatabase(name); rq.onsuccess=rq.onerror=rq.onblocked=()=>res(); }); log('Deleted IndexedDB: '+name); } } } else { log('indexedDB.databases() not supported'); } } catch(e){ log('Clear caches error: '+(e?.message||e)); } }
+    function updateModelBadges(){
+      try{
+        if (!modelSel) return;
+        const s = getDownloadedSet();
+        [...modelSel.options].forEach(opt=>{
+          const id = opt.value;
+          const cached = s.has(id);
+          const base = id;
+          opt.textContent = cached ? `${base} • cached` : base;
+        });
+      }catch(e){ log('updateModelBadges error: ' + (e?.message||e)); }
+    }
+     // Dynamic bottom padding so chat is never cut off
+     function adjustPad(){ try{ const pb=(inputbar?.offsetHeight||80)+20; msgs.style.paddingBottom = pb + 'px'; }catch{} }
+     new ResizeObserver(()=>adjustPad()).observe(inputbar);
+     window.addEventListener('resize', adjustPad);
+     document.addEventListener('keydown', (e)=>{
+       const k = e.key?.toLowerCase();
+       if ((e.metaKey || e.ctrlKey) && k === 'k') { e.preventDefault(); toggleLogs(); }
+       if (k === 'escape' && logModal.style.display !== 'none') toggleLogs(false);
+     });
+     // Tabs and manager actions
+     if (tabDownloads) tabDownloads.onclick = ()=> setActiveTab('downloads');
+     if (tabLogs) tabLogs.onclick = ()=> setActiveTab('logs');
+    if (refreshDownloads) refreshDownloads.onclick = ()=> { renderDownloads(); updateModelBadges(); };
+     if (clearAllCaches) clearAllCaches.onclick = ()=> clearAllModelCachesFn();
+     if (clearDownloadsTrack) clearDownloadsTrack.onclick = ()=> { localStorage.removeItem(LS_DOWNLOADED); renderDownloads(); updateModelBadges(); };
+     // App actions
+     input.addEventListener('keydown', e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); onSend(); }});
+     sendBtn.onclick = onSend;
+     clearBtn.onclick = () => { msgs.innerHTML=''; history = [ history[0] ]; saveChat(); input.focus(); log('Chat cleared'); };
+     loadBtn.onclick = () => loadSelectedModel();
+     closeLogs.onclick = () => toggleLogs(false);
+     clearLogs.onclick = () => { logs.length = 0; renderLogs(); log('Logs cleared'); };
+     // Theme/accent and Credits handlers
+     if (themeToggle) themeToggle.onclick = () => { document.body.classList.toggle('light'); themeToggle.textContent = 'Theme: ' + (document.body.classList.contains('light') ? 'Light' : 'Dark'); saveSettings(); };
+     if (accentPicker) accentPicker.addEventListener('input', ()=>{ document.documentElement.style.setProperty('--accent', accentPicker.value); saveSettings(); });
+     if (langSel) langSel.addEventListener('change', ()=>{ saveSettings(); });
+     if (creditsBtn) creditsBtn.onclick = ()=> { const modal = document.getElementById('creditsModal'); if (modal) modal.style.display = 'grid'; };
+     if (closeCredits) closeCredits.onclick = ()=> { const modal = document.getElementById('creditsModal'); if (modal) modal.style.display = 'none'; };
+     // System Prompt modal handlers
+     if (systemBtn) systemBtn.onclick = ()=> { const m = document.getElementById('sysModal'); if (m) { const v=(localStorage.getItem(LS_SYSTEM)||''); const t=document.getElementById('sysInput'); if(t) t.value=v; m.style.display='grid'; } };
+     if (closeSys) closeSys.onclick = ()=> { const m = document.getElementById('sysModal'); if (m) m.style.display='none'; };
+     if (saveSys) saveSys.onclick = ()=> { const t=document.getElementById('sysInput'); const v=t?t.value.trim():''; localStorage.setItem(LS_SYSTEM, v); updateSystemPrompt(); const m=document.getElementById('sysModal'); if(m) m.style.display='none'; log('System prompt saved'); };
+ 
+     // Init
+     loadSettings();
+     loadChat();
+        // Load custom system prompt if present
+        try { const sp = localStorage.getItem(LS_SYSTEM); if (sp) history[0] = { role:'system', content: sp }; } catch {}
+     if (!msgs.children.length) add('bot', 'Welcome! Load a small model for stronger replies, or just start chatting to auto-load. If WebGPU is unavailable, I will use a tiny local fallback.');
+     adjustPad();
+     if (!('gpu' in navigator)) {
+       gpuWarn.style.display = '';
+       setStatus('unavailable');
+       log('WebGPU unavailable');
+     } else {
+       populateModels().then(()=> { setStatus('idle'); try { updateModelBadges(); } catch {} });
+     }
   </script>
 </body>
 </html>

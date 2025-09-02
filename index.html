@@ -82,147 +82,133 @@
     .creditsPanel { width:min(560px, 94vw); background:#0b0c10; border:1px solid #2a2d3a; border-radius:12px; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,.4) }
     .creditsHead { display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-bottom:1px solid #1f2230; background:#0f1117 }
     .creditsBody { padding:12px; color:var(--fg); font-size:14px }
+    /* Panic overlay */
+    .panicOverlay { position:fixed; inset:0; background:#000; z-index:9999; display:none }
+    /* Textareas default styling */
+    .creditsBody textarea { background:#0f1117; color:var(--fg); border:1px solid #2a2d3a }
+    /* Fix system prompt and memory inputs in light mode */
+    body.light #sysModal .creditsBody textarea,
+    body.light #memModal .creditsBody textarea { background:#fff; color:#111827; border-color:#e5e7eb }
+    body.light #sysModal .creditsBody textarea::placeholder,
+    body.light #memModal .creditsBody textarea::placeholder { color:#6b7280 }
   </style>
 </head>
 <body>
   <div class="app">
     <div class="header">
       <div class="title">Local AI</div>
-      <div class="sub">Runs 100% in your browser. Single file. Choose a small model to load (WebGPU) or use the built-in tiny fallback.</div>
+      <div class="sub">Private, offline-friendly</div>
       <div class="toolbar">
-        <label class="badge">Model
-          <select id="modelSel" class="nice" title="Pick a small model"></select>
+        <select id="modelSel" class="nice"></select>
+        <button id="loadModel" class="load">Load</button>
+        <span class="status" id="engineStatus">Engine: idle</span>
+        <span class="badge" id="gpuWarn" style="display:none">WebGPU not available</span>
+        <label class="switch" title="Simple Mode">
+          <input type="checkbox" id="simpleToggle" checked />
+          <span>Simple</span>
         </label>
-        <button id="loadModel" class="load">Load Model</button>
-        <label class="switch"><input type="checkbox" id="simpleToggle"><span>Simple</span></label>
-        <label class="badge">Mode
-          <select id="promptMode" class="nice">
-            <option value="">None</option>
-            <option value="genius">Genius</option>
-            <option value="rewriter">reWriter</option>
-            <option value="programmer">Programmer</option>
-            <option value="buddy">Buddy</option>
-          </select>
-        </label>
-        <label class="badge accentPreview">Accent <input type="color" id="accentPicker" value="#7c3aed"></label>
-        <button id="themeToggle" class="badge">Theme: Dark</button>
-        <label class="badge">Lang
-          <select id="langSel" class="nice">
-            <option value="en">EN</option>
-            <option value="es">ES</option>
-          </select>
-        </label>
-        <button id="creditsBtn" class="badge">Credits</button>
-        <button id="systemBtn" class="badge">System Prompt</button>
-        <button id="memoryBtn" class="badge">Memory</button>
-        <span id="engineStatus" class="status">Engine: idle</span>
+        <select id="promptMode" class="nice">
+          <option value="default">Default</option>
+          <option value="genius">Genius</option>
+          <option value="rewriter">Rewriter</option>
+          <option value="programmer">Programmer</option>
+          <option value="buddy">Buddy</option>
+        </select>
+        <button id="systemBtn" class="btn ghost">System</button>
+        <button id="memoryBtn" class="btn ghost">Memory</button>
+        <button id="creditsBtn" class="btn ghost">Credits</button>
+        <button id="themeToggle" class="btn ghost">Theme: Dark</button>
+        <input id="accentPicker" type="color" value="#7c3aed" title="Accent color" class="badge accentPreview" style="height:28px;width:36px;padding:0;border-radius:8px" />
+        <select id="langSel" class="nice"><option value="en">EN</option></select>
       </div>
-      <div id="progressWrap" class="progress">
-        <div class="progressTrack"><div id="progressBar" class="progressBar"></div></div>
-        <span id="progressText" class="progressText">0%</span>
+      <div class="progress" id="progressWrap">
+        <div class="progressTrack"><div class="progressBar" id="progressBar"></div></div>
+        <div class="progressText" id="progressText">0%</div>
       </div>
-      <div id="gpuWarn" class="warning" style="display:none">WebGPU not available. The built-in tiny fallback will be used. Try Chrome/Edge latest and ensure WebGPU is enabled.</div>
     </div>
 
     <div id="msgs" class="messages"></div>
 
     <div class="inputbar">
       <div class="row">
-        <textarea id="in" placeholder="Type your message..." autocomplete="off"></textarea>
+        <textarea id="in" rows="1" placeholder="Type a message..."></textarea>
         <button id="send" class="btn">Send</button>
-        <button id="queue" class="btn ghost" title="Queue this message">Queue</button>
-        <button id="stop" class="btn muted" title="Stop generation">Stop</button>
+        <button id="clear" class="btn muted">Clear</button>
       </div>
       <div class="ctrls">
-        <label class="badge">Temp <input id="temp" class="range" type="range" min="0" max="2" step="0.1" value="0.9"></label>
+        <label class="badge">Temp <input id="temp" class="range" type="range" min="0.1" max="2.0" step="0.05" value="1" /></label>
+        <button id="queue" class="btn ghost">Queue</button>
+        <button id="stop" class="btn ghost">Stop</button>
         <span id="tokStats" class="badge">Tokens: <span id="tokCount">0</span> • TPS: <span id="tpsAvg">0</span></span>
-        <button id="clear" class="badge">Clear</button>
       </div>
     </div>
   </div>
 
-  <!-- Logs Modal -->
-  <div id="logModal" class="logModal" aria-hidden="true">
-    <div class="logPanel" role="dialog" aria-modal="true" aria-labelledby="logTitle">
+  <!-- Logs/Downloads Modal -->
+  <div id="logModal" class="logModal">
+    <div class="logPanel">
       <div class="logHead">
-        <div id="logTitle" class="logTitle">Command Center</div>
+        <div class="logTitle">Downloads & Logs</div>
         <div class="logBtns">
-          <div class="tabs">
-            <button id="tabDownloads" class="tab active">Downloads</button>
-            <button id="tabLogs" class="tab">Logs</button>
+          <button id="closeLogs" class="btn ghost">Close</button>
+          <button id="clearLogs" class="btn ghost">Clear Logs</button>
+        </div>
+      </div>
+      <div class="panelBody">
+        <div class="tabs">
+          <button id="tabDownloads" class="tab active">Downloads</button>
+          <button id="tabLogs" class="tab">Logs</button>
+        </div>
+        <div id="downloadsBody">
+          <div class="mgrBtns">
+            <button id="refreshDownloads" class="btn ghost">Refresh</button>
+            <button id="clearAllCaches" class="btn ghost">Clear Caches</button>
+            <button id="clearDownloadsTrack" class="btn ghost">Clear Track</button>
           </div>
-          <button id="closeLogs" class="logBtn">Close</button>
+          <div id="downloadsList"></div>
+        </div>
+        <div id="logsBody">
+          <pre id="logBody"></pre>
         </div>
       </div>
-      <div id="downloadsBody" class="panelBody" style="display:block">
-        <div id="downloadsList"></div>
-        <div class="mgrBtns">
-          <button id="refreshDownloads" class="logBtn">Refresh</button>
-          <button id="clearAllCaches" class="logBtn">Clear All Caches (Try)</button>
-          <button id="clearDownloadsTrack" class="logBtn">Clear Downloaded List</button>
-        </div>
+    </div>
+  </div>
+
+  <!-- System Prompt Modal -->
+  <div id="sysModal" class="creditsModal">
+    <div class="creditsPanel">
+      <div class="creditsHead"><div>Edit System Prompt</div><button id="closeSys" class="btn ghost">Close</button></div>
+      <div class="creditsBody">
+        <textarea id="sysInput" rows="10" placeholder="Enter a custom system prompt..." style="width:100%; resize:vertical; padding:10px; border-radius:10px;"></textarea>
+        <div class="mgrBtns" style="justify-content:flex-end"><button id="saveSys" class="btn">Save</button></div>
       </div>
-      <div id="logsBody" class="panelBody">
-        <pre id="logBody"></pre>
-        <div class="mgrBtns">
-          <button id="clearLogs" class="logBtn">Clear Logs</button>
-        </div>
+    </div>
+  </div>
+
+  <!-- Memory Modal -->
+  <div id="memModal" class="creditsModal">
+    <div class="creditsPanel">
+      <div class="creditsHead"><div>Buddy Memory</div><button id="closeMem" class="btn ghost">Close</button></div>
+      <div class="creditsBody">
+        <label style="display:flex; gap:8px; align-items:center; margin-bottom:8px;"><input type="checkbox" id="memInPrompt" /> <span class="badge">Use memory in system prompt</span></label>
+        <textarea id="memInput" rows="10" placeholder="{}" style="width:100%; resize:vertical; padding:10px; border-radius:10px; font-family:ui-monospace;"></textarea>
+        <div class="mgrBtns" style="justify-content:flex-end"><button id="saveMem" class="btn">Save</button></div>
       </div>
     </div>
   </div>
 
   <!-- Credits Modal -->
-  <div id="creditsModal" class="creditsModal" aria-hidden="true">
-    <div class="creditsPanel" role="dialog" aria-modal="true" aria-labelledby="creditsTitle">
-      <div class="creditsHead">
-        <div id="creditsTitle" class="logTitle">Credits</div>
-        <button id="closeCredits" class="logBtn">Close</button>
-      </div>
+  <div id="creditsModal" class="creditsModal">
+    <div class="creditsPanel">
+      <div class="creditsHead"><div>Credits</div><button id="closeCredits" class="btn ghost">Close</button></div>
       <div class="creditsBody">
-        <p><strong>Local AI (Single HTML)</strong></p>
-        <p>Powered by WebLLM running fully in your browser with WebGPU acceleration when available.</p>
-        <ul>
-          <li>WebLLM by MLC AI</li>
-          <li>Design and integration by you</li>
-          <li>Built with plain HTML/CSS/JS, optimized for desktop and mobile</li>
-        </ul>
-        <p>Thank you for trying this demo!</p>
-      </div>
-    </div>
-  </div>
-  <!-- System Prompt Modal -->
-  <div id="sysModal" class="creditsModal" aria-hidden="true">
-    <div class="creditsPanel" role="dialog" aria-modal="true" aria-labelledby="sysTitle">
-      <div class="creditsHead">
-        <div id="sysTitle" class="logTitle">Edit System Prompt</div>
-        <button id="closeSys" class="logBtn">Close</button>
-      </div>
-      <div class="creditsBody">
-        <textarea id="sysInput" rows="8" style="width:100%; resize:vertical; padding:10px; border-radius:10px; border:1px solid #2a2d3a; background:#0f1117; color:var(--fg)" placeholder="Enter a custom system prompt..."></textarea>
-        <div class="mgrBtns" style="justify-content:flex-end">
-          <button id="saveSys" class="logBtn">Save</button>
-        </div>
-      </div>
-    </div>
-  </div>
-  <!-- Memory Modal -->
-  <div id="memModal" class="creditsModal" aria-hidden="true">
-    <div class="creditsPanel" role="dialog" aria-modal="true" aria-labelledby="memTitle">
-      <div class="creditsHead">
-        <div id="memTitle" class="logTitle">Buddy Memory</div>
-        <button id="closeMem" class="logBtn">Close</button>
-      </div>
-      <div class="creditsBody">
-        <p style="margin-top:0;color:var(--mut)">Edit shared memory (JSON). The assistant can use [tool:memory]{"action":"..."} to modify this.</p>
-        <textarea id="memInput" rows="10" style="width:100%; resize:vertical; padding:10px; border-radius:10px; border:1px solid #2a2d3a; background:#0f1117; color:var(--fg)"></textarea>
-        <label class="badge" style="display:flex;align-items:center;gap:8px;margin-top:8px"><input type="checkbox" id="memInPrompt"> Include memory in system prompt</label>
-        <div class="mgrBtns" style="justify-content:flex-end">
-          <button id="saveMem" class="logBtn">Save</button>
-        </div>
+        <p>Local AI single-file demo.</p>
       </div>
     </div>
   </div>
 
+  <!-- Panic overlay for quick screen blackout -->
+  <div id="panicOverlay" class="panicOverlay" aria-hidden="true" title="Panic screen. Press Esc or click to exit."></div>
   <!-- Main app (module) -->
   <script type="module">
     import * as webllm from "https://esm.run/@mlc-ai/web-llm";
@@ -277,6 +263,7 @@
     const stopBtn = $('#stop');
     const tokCountEl = $('#tokCount');
     const tpsAvgEl = $('#tpsAvg');
+    const panicOverlay = $('#panicOverlay');
 
     // Persist chat and settings
     const LS_CHAT = 'localai_chat_html_v2';
@@ -468,14 +455,18 @@
       try {
         const list = (webllm?.prebuiltAppConfig?.model_list) || [];
         modelSel.innerHTML = '';
-        const sorted = [...list].sort((a,b)=>{
-          const wa = a.model_id.toLowerCase();
-          const wb = b.model_id.toLowerCase();
+        const isSimple = (simpleToggle ? simpleToggle.checked : (localStorage.getItem(LS_SIMPLE) === '1'));
+        // In Simple mode, show only tiny/small models to reduce noise
+        const filtered = isSimple ? list.filter(rec => /0\.5b|1\.5b|tiny|mini|small/i.test((rec?.model_id||'')+'')) : list;
+        const sorted = [...filtered].sort((a,b)=>{
+          const wa = (a.model_id||'').toLowerCase();
+          const wb = (b.model_id||'').toLowerCase();
           const ra = wa.includes('0.5b') ? 0 : wa.includes('1.5b') ? 1 : 2;
           const rb = wb.includes('0.5b') ? 0 : wb.includes('1.5b') ? 1 : 2;
           return ra - rb;
         });
-        for (const rec of sorted.slice(0, 40)){
+        const maxItems = isSimple ? 10 : 40;
+        for (const rec of sorted.slice(0, maxItems)){
           const opt = document.createElement('option');
           opt.value = rec.model_id; opt.textContent = rec.model_id;
           modelSel.appendChild(opt);
@@ -483,7 +474,7 @@
         let def = [...modelSel.options].find(o=>/qwen.*0\.5b/i.test(o.value))?.value || modelSel.options[0]?.value;
         if (lastChosenModel && [...modelSel.options].some(o=>o.value===lastChosenModel)) def = lastChosenModel;
         if (def) modelSel.value = def;
-        log(`Models loaded (${list.length} total). Default: ${modelSel.value}`);
+        log(`Models loaded (${filtered.length} shown of ${list.length} total). Default: ${modelSel.value}`);
       } catch(e){ log('Populate models failed: ' + (e?.message||e)); }
     }
     async function loadSelectedModel(){
@@ -558,7 +549,27 @@
           return;
         }
         log('Starting streaming response');
-        const chunks = await eng.chat.completions.create({ messages: history, temperature: t, stream: true, stream_options: { include_usage: true } });
+        // Ensure chat history is valid for the model API
+        function sanitizeHistoryForLLM(hist, userText){
+        try{
+          const arr = Array.isArray(hist) ? hist.map(m=>({ role: String(m.role||'assistant'), content: String(m.content||'') })) : [];
+          // Ensure a system prompt exists at the start
+          if (!arr.length || arr[0].role !== 'system'){
+            arr.unshift({ role:'system', content: 'You are a concise, helpful AI assistant.' });
+          }
+          // Drop trailing messages until last is user/tool
+          while (arr.length && !['user','tool'].includes(arr[arr.length-1].role)){
+            arr.pop();
+          }
+          // If still invalid or empty, inject the current userText (or a placeholder)
+          if (!arr.length || !['user','tool'].includes(arr[arr.length-1].role)){
+            arr.push({ role:'user', content: String(userText||'') || 'Hello' });
+          }
+          return arr;
+        }catch{ return [{ role:'system', content:'You are a concise, helpful AI assistant.' }, { role:'user', content: String(userText||'')||'Hello' }]; }
+        }
+        const safeMessages = sanitizeHistoryForLLM(history, userText);
+        const chunks = await eng.chat.completions.create({ messages: safeMessages, temperature: t, stream: true, stream_options: { include_usage: true } });
         let acc = '';
         for await (const ch of chunks){
           if (stopRequested) { log('Streaming stopped'); break; }
@@ -703,10 +714,12 @@
      // Simple mode UI toggle and temp warning
      function applySimpleUI(){ try{ const simple = simpleToggle && simpleToggle.checked; const tempWrap = tempEl && tempEl.parentElement; if (tempWrap) tempWrap.style.display = simple ? 'none' : ''; if (memoryBtn) memoryBtn.style.display = simple ? 'none' : ''; if (systemBtn) systemBtn.style.display = simple ? 'none' : ''; }catch{} }
      function checkTempWarn(){ try{ const v = (tempEl && !Number.isNaN(tempEl.valueAsNumber)) ? tempEl.valueAsNumber : (parseFloat(tempEl ? tempEl.value : '0')||0); let el = document.getElementById('tempWarn'); if (!el){ el = document.createElement('span'); el.id='tempWarn'; el.className='badge'; el.style.marginLeft='8px'; el.style.color='#ef4444'; el.style.display='none'; el.textContent='High temperature may reduce quality.'; const ctrls=document.querySelector('.ctrls'); if (ctrls){ const anchor=document.getElementById('tokStats'); ctrls.insertBefore(el, anchor || ctrls.lastChild); } } el.style.display = v > 1.25 ? 'inline-flex' : 'none'; }catch{} }
-     if (simpleToggle) simpleToggle.addEventListener('change', ()=>{ try{ localStorage.setItem(LS_SIMPLE, simpleToggle.checked ? '1' : '0'); }catch{} applySimpleUI(); });
+     if (simpleToggle) simpleToggle.addEventListener('change', ()=>{ try{ localStorage.setItem(LS_SIMPLE, simpleToggle.checked ? '1' : '0'); }catch{} applySimpleUI(); populateModels().then(()=>{ updateModelBadges(); }).catch(()=>{}); });
      if (tempEl) tempEl.addEventListener('input', checkTempWarn);
      loadSettings();
      loadChat();
+     // Ensure Simple mode is default on first run
+     try { if (localStorage.getItem(LS_SIMPLE) === null) localStorage.setItem(LS_SIMPLE, '1'); } catch {}
      // Load custom system prompt if present
      try { const sp = localStorage.getItem(LS_SYSTEM); if (sp) history[0] = { role:'system', content: sp }; } catch {}
      // Apply simple mode from storage and adjust UI; initialize temp warning
@@ -720,6 +733,31 @@
      renderDownloads();
      buddyMemory = loadMemory();
      updateQueueLabel();
+     adjustPad();
+     // Panic key: press P and A simultaneously to black out the screen
+     const pressedKeys = new Set();
+     document.addEventListener('keydown', (e)=>{
+       const k = (e.key||'').toLowerCase();
+       if (!k) return;
+       pressedKeys.add(k);
+       if (pressedKeys.has('p') && pressedKeys.has('a')){
+         if (panicOverlay){ panicOverlay.style.display = 'block'; }
+         e.preventDefault();
+       }
+     });
+     document.addEventListener('keyup', (e)=>{
+       const k = (e.key||'').toLowerCase();
+       if (!k) return;
+       pressedKeys.delete(k);
+     });
+     if (panicOverlay){
+       panicOverlay.addEventListener('click', ()=>{ panicOverlay.style.display = 'none'; });
+     }
+     document.addEventListener('keydown', (e)=>{
+       if (e.key === 'Escape' && panicOverlay && panicOverlay.style.display !== 'none'){
+         panicOverlay.style.display = 'none';
+       }
+     });
      adjustPad();
 </script>
 </body>

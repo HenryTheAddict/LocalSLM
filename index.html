@@ -121,13 +121,31 @@
           <input type="checkbox" id="simpleToggle" checked />
           <span>Simple</span>
         </label>
-        <select id="promptMode" class="nice">
-          <option value="default">Default</option>
-          <option value="genius">Genius</option>
-          <option value="rewriter">Rewriter</option>
-          <option value="programmer">Programmer</option>
-          <option value="buddy">Buddy</option>
-        </select>
+        <div id="personalityWrap" style="display:flex; align-items:center; gap:6px;">
+          <label id="personalityLabel" style="font-size:12px; color:var(--mut); display:none;">Personality:</label>
+          <select id="promptMode" class="nice" title="Change AI personality">
+            <option value="genius" selected>Genius</option>
+            <option value="default">Default</option>
+            <option value="teacher">Teacher</option>
+            <option value="creative">Creative</option>
+            <option value="analyst">Analyst</option>
+            <option value="storyteller">Storyteller</option>
+            <option value="coach">Coach</option>
+            <option value="scientist">Scientist</option>
+            <option value="poet">Poet</option>
+            <option value="critic">Critic</option>
+            <option value="mentor">Mentor</option>
+            <option value="explorer">Explorer</option>
+            <option value="optimist">Optimist</option>
+            <option value="realist">Realist</option>
+            <option value="philosopher">Philosopher</option>
+            <option value="translator">Translator</option>
+            <option value="summarizer">Summarizer</option>
+            <option value="rewriter">Rewriter</option>
+            <option value="programmer">Programmer</option>
+            <option value="buddy">Buddy</option>
+          </select>
+        </div>
         <button id="systemBtn" class="btn ghost">System</button>
         <button id="memoryBtn" class="btn ghost">Memory</button>
         <button id="creditsBtn" class="btn ghost">Credits</button>
@@ -381,6 +399,21 @@
         const base = 'You are a concise, helpful AI assistant. You may emit internal tool instructions like [tool:settings]{"theme":"light"} or [tool:preview]{"language":"html","code":"..."}, but these must NEVER be shown directly to the user. Silently parse and act on them, then remove any [tool:*]{...} blocks from the visible reply.';
         let addon = '';
         if (mode === 'genius') addon = ' Explain deeply, step-by-step, and cover edge cases.';
+        else if (mode === 'teacher') addon = ' Act as an educational instructor. Break down complex topics into simple, understandable parts. Use examples and analogies to help the user learn.';
+        else if (mode === 'creative') addon = ' Be imaginative and artistic. Think outside the box, suggest creative solutions, and inspire with original ideas.';
+        else if (mode === 'analyst') addon = ' Focus on data, facts, and logical analysis. Present information systematically with clear reasoning and evidence-based conclusions.';
+        else if (mode === 'storyteller') addon = ' Craft engaging narratives. Use vivid descriptions, build context, and make responses compelling and story-like when appropriate.';
+        else if (mode === 'coach') addon = ' Be motivational and goal-oriented. Encourage the user, help them set objectives, and provide actionable steps toward success.';
+        else if (mode === 'scientist') addon = ' Approach topics methodically and scientifically. Use precise terminology, cite methodologies, and maintain objectivity.';
+        else if (mode === 'poet') addon = ' Use lyrical and expressive language. Employ metaphors, rhythm, and beautiful phrasing to convey ideas artistically.';
+        else if (mode === 'critic') addon = ' Provide detailed evaluations and constructive feedback. Analyze strengths and weaknesses with thoughtful, balanced perspectives.';
+        else if (mode === 'mentor') addon = ' Offer guidance and wisdom. Share insights from experience, help navigate challenges, and support long-term growth.';
+        else if (mode === 'explorer') addon = ' Be curious and adventurous. Ask probing questions, explore different angles, and discover new possibilities together.';
+        else if (mode === 'optimist') addon = ' Maintain a positive, encouraging tone. Focus on opportunities, solutions, and the bright side of situations.';
+        else if (mode === 'realist') addon = ' Be practical and straightforward. Give honest, no-nonsense advice grounded in reality, without sugarcoating.';
+        else if (mode === 'philosopher') addon = ' Engage in deep thinking and abstract concepts. Explore fundamental questions, ethics, and the nature of things.';
+        else if (mode === 'translator') addon = ' Focus on language and communication. Help bridge understanding across languages, cultures, and contexts.';
+        else if (mode === 'summarizer') addon = ' Be concise and to-the-point. Extract key information, eliminate fluff, and deliver clear summaries.';
         else if (mode === 'rewriter') addon = ' Rewrite user text to be logically correct, spell-checked, and grammatically sound while preserving intent.';
         else if (mode === 'programmer') addon = ' Generate clean, minimal HTML/CSS/JS. Use a single code block with fences.';
         else if (mode === 'buddy') addon = ' Act as a warm, supportive friend. Use short, caring messages and remember helpful details.';
@@ -1081,7 +1114,23 @@
        memInPromptEl.addEventListener('change', ()=>{ localStorage.setItem(LS_MEMORY_IN_PROMPT, memInPromptEl.checked ? '1' : '0'); updateSystemPrompt(); });
      }
      // Simple mode UI toggle and temp warning
-     function applySimpleUI(){ try{ const simple = simpleToggle && simpleToggle.checked; const tempWrap = tempEl && tempEl.parentElement; if (tempWrap) tempWrap.style.display = simple ? 'none' : ''; if (memoryBtn) memoryBtn.style.display = simple ? 'none' : ''; if (systemBtn) systemBtn.style.display = simple ? 'none' : ''; }catch{} }
+     function applySimpleUI(){ 
+       try{ 
+         const simple = simpleToggle && simpleToggle.checked; 
+         const tempWrap = tempEl && tempEl.parentElement; 
+         if (tempWrap) tempWrap.style.display = simple ? 'none' : ''; 
+         if (memoryBtn) memoryBtn.style.display = simple ? 'none' : ''; 
+         if (systemBtn) systemBtn.style.display = simple ? 'none' : ''; 
+         const personalityLabel = $('#personalityLabel');
+         if (personalityLabel) personalityLabel.style.display = simple ? 'block' : 'none';
+         // In simple mode, make personality dropdown more prominent
+         const personalityWrap = $('#personalityWrap');
+         if (personalityWrap && simple) {
+           personalityWrap.style.marginLeft = 'auto';
+           personalityWrap.style.marginRight = '8px';
+         }
+       }catch{} 
+     }
      function checkTempWarn(){ try{ const v = (tempEl && !Number.isNaN(tempEl.valueAsNumber)) ? tempEl.valueAsNumber : (parseFloat(tempEl ? tempEl.value : '0')||0); let el = document.getElementById('tempWarn'); if (!el){ el = document.createElement('span'); el.id='tempWarn'; el.className='badge'; el.style.marginLeft='8px'; el.style.color='#ef4444'; el.style.display='none'; el.textContent='High temperature may reduce quality.'; const ctrls=document.querySelector('.ctrls'); if (ctrls){ const anchor=document.getElementById('tokStats'); ctrls.insertBefore(el, anchor || ctrls.lastChild); } } el.style.display = v > 1.25 ? 'inline-flex' : 'none'; }catch{} }
      if (simpleToggle) simpleToggle.addEventListener('change', ()=>{ try{ localStorage.setItem(LS_SIMPLE, simpleToggle.checked ? '1' : '0'); }catch{} applySimpleUI(); populateModels().then(()=>{ updateModelBadges(); }).catch(()=>{}); });
      if (tempEl) tempEl.addEventListener('input', checkTempWarn);
@@ -1093,6 +1142,23 @@
      try { const sp = localStorage.getItem(LS_SYSTEM); if (sp) history[0] = { role:'system', content: sp }; } catch {}
      // Apply simple mode from storage and adjust UI; initialize temp warning
      try { const sm = localStorage.getItem(LS_SIMPLE) === '1'; if (simpleToggle) simpleToggle.checked = sm; } catch {}
+     // Set genius as default personality if not already set
+     if (promptMode) {
+       const savedMode = localStorage.getItem('localai_personality_mode');
+       if (!savedMode || ![...promptMode.options].some(o => o.value === savedMode)) {
+         promptMode.value = 'genius';
+         localStorage.setItem('localai_personality_mode', 'genius');
+       } else {
+         promptMode.value = savedMode;
+       }
+       // Update system prompt when personality changes
+       promptMode.addEventListener('change', () => {
+         localStorage.setItem('localai_personality_mode', promptMode.value);
+         updateSystemPrompt();
+       });
+       // Update system prompt on initial load
+       updateSystemPrompt();
+     }
      applySimpleUI();
      checkTempWarn();
      if (!msgs.children.length) add('bot', 'Welcome! Load a small model for stronger replies, or just start chatting to auto-load. If WebGPU is unavailable, I will use a tiny local fallback.');

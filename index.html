@@ -50,10 +50,37 @@
     .panelBody { display:flex; flex-direction:column }
     #downloadsBody { display:none }
     #logsBody { display:none }
-    #downloadsList { padding:12px; max-height:60vh; overflow:auto }
-    .downloadItem { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 10px; border-bottom:1px solid #1f2230; font-size:13px }
+    #downloadsList { padding:16px; max-height:60vh; overflow:auto }
+    .downloadsGrid { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:12px; margin-bottom:16px }
+    .downloadItem { background:#1b1f2b; border:1px solid #2a2d3a; border-radius:12px; padding:12px; display:flex; flex-direction:column; gap:8px; transition:all 0.2s ease }
+    .downloadItem:hover { border-color:var(--accent); background:#1f2330; transform:translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,0.3) }
+    .downloadItemHeader { display:flex; align-items:center; justify-content:space-between; gap:8px }
+    .downloadItemName { font-weight:600; font-size:14px; color:var(--fg); word-break:break-word; flex:1 }
+    .downloadItemMeta { display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:11px; color:var(--mut) }
+    .modelBadge { background:var(--accent); color:#fff; padding:2px 6px; border-radius:6px; font-size:10px; font-weight:600; text-transform:uppercase }
+    .modelBadge.small { background:#4ade80; }
+    .modelBadge.medium { background:#fbbf24; }
+    .modelBadge.large { background:#ef4444; }
+    .modelBadge.cached { background:#10b981; }
+    .downloadItemActions { display:flex; gap:6px; margin-top:4px }
+    .downloadItemBtn { background:transparent; border:1px solid #2a2d3a; color:var(--fg); padding:6px 10px; border-radius:8px; font-size:11px; cursor:pointer; transition:all 0.2s }
+    .downloadItemBtn:hover { background:#2a2d3a; border-color:var(--accent) }
+    .downloadItemBtn.danger { border-color:#523; color:#fca5a5 }
+    .downloadItemBtn.danger:hover { background:#2b1b1b; border-color:#fca5a5 }
+    .downloadItemBtn.primary { background:var(--accent); border-color:var(--accent); color:#fff }
+    .downloadItemBtn.primary:hover { opacity:0.9 }
     .delBtn { background:#2b1b1b; color:#fca5a5; border:1px solid #523; padding:4px 8px; border-radius:8px; font-size:12px }
-    .mgrBtns { display:flex; gap:8px; padding:8px 12px; border-top:1px solid #1f2230; background:#0f1117 }
+    .mgrBtns { display:flex; gap:8px; padding:12px 16px; border-top:1px solid #1f2230; background:#0f1117; flex-wrap:wrap }
+    .downloadsSection { margin-bottom:20px }
+    .downloadsSectionTitle { font-size:14px; font-weight:600; color:var(--fg); margin-bottom:12px; display:flex; align-items:center; gap:8px }
+    .downloadsSectionTitle::before { content:''; width:3px; height:16px; background:var(--accent); border-radius:2px }
+    .emptyState { text-align:center; padding:40px 20px; color:var(--mut); font-size:14px }
+    .emptyStateIcon { font-size:48px; margin-bottom:12px; opacity:0.5 }
+    body.light .downloadItem { background:#f3f4f6; border-color:#e5e7eb }
+    body.light .downloadItem:hover { background:#ffffff; border-color:var(--accent) }
+    body.light .downloadItemBtn { border-color:#e5e7eb; color:#111827 }
+    body.light .downloadItemBtn:hover { background:#e5e7eb }
+    body.light .mgrBtns { background:#f3f4f6; border-color:#e5e7eb }
     .switch { display:inline-flex; align-items:center; gap:6px; padding:4px 8px; border-radius:10px; border:1px solid #333; user-select:none }
     .switch input { appearance:none; width:34px; height:20px; background:#222; border-radius:999px; position:relative; outline:none; cursor:pointer; border:1px solid #333 }
     .switch input:checked { background:#4ade80; border-color:#4ade80 }
@@ -202,15 +229,24 @@
           <button id="tabLogs" class="tab">Logs</button>
         </div>
         <div id="downloadsBody">
+          <div id="downloadsList">
+            <div class="downloadsSection">
+              <div class="downloadsSectionTitle">Available Models</div>
+              <div id="availableModelsGrid" class="downloadsGrid"></div>
+            </div>
+            <div class="downloadsSection">
+              <div class="downloadsSectionTitle">Downloaded Models</div>
+              <div id="downloadedModelsGrid" class="downloadsGrid"></div>
+            </div>
+          </div>
           <div class="mgrBtns">
-            <button id="refreshDownloads" class="btn ghost">Refresh</button>
-            <button id="clearAllCaches" class="btn ghost">Clear Caches</button>
+            <button id="refreshDownloads" class="btn ghost">🔄 Refresh</button>
+            <button id="clearAllCaches" class="btn ghost">🗑️ Clear Caches</button>
             <button id="clearDownloadsTrack" class="btn ghost">Clear Track</button>
-            <button id="exportModelBtn" class="btn">Export Model</button>
-            <button id="importModelBtn" class="btn">Import Model</button>
+            <button id="exportModelBtn" class="btn">📦 Export Model</button>
+            <button id="importModelBtn" class="btn">📥 Import Model</button>
             <input type="file" id="importModelFile" accept=".zip" style="display:none" />
           </div>
-          <div id="downloadsList"></div>
         </div>
         <div id="logsBody">
           <pre id="logBody"></pre>
@@ -283,6 +319,8 @@
     const downloadsBody = $('#downloadsBody');
     const logsBody = $('#logsBody');
     const downloadsList = $('#downloadsList');
+    const availableModelsGrid = $('#availableModelsGrid');
+    const downloadedModelsGrid = $('#downloadedModelsGrid');
     const refreshDownloads = $('#refreshDownloads');
     const clearAllCaches = $('#clearAllCaches');
     const clearDownloadsTrack = $('#clearDownloadsTrack');
@@ -345,7 +383,7 @@
       if (logModal.style.display !== 'none') renderLogs();
     }
     function renderLogs(){ logBody.textContent = logs.join('\n'); logBody.scrollTop = logBody.scrollHeight; }
-    function toggleLogs(force) { const show = force ?? (logModal.style.display === 'none'); logModal.style.display = show ? 'grid' : 'none'; if (show) { setActiveTab(activeTab); renderLogs(); renderDownloads(); } }
+    function toggleLogs(force) { const show = force ?? (logModal.style.display === 'none'); logModal.style.display = show ? 'grid' : 'none'; if (show) { setActiveTab(activeTab); renderLogs(); renderAvailableModels(); renderDownloads(); } }
     let activeTab = 'downloads';
     function setActiveTab(name){ activeTab = name; if(name==='downloads'){ tabDownloads.classList.add('active'); tabLogs.classList.remove('active'); downloadsBody.style.display='block'; logsBody.style.display='none'; } else { tabLogs.classList.add('active'); tabDownloads.classList.remove('active'); downloadsBody.style.display='none'; logsBody.style.display='block'; } }
 
@@ -576,6 +614,7 @@
         localStorage.setItem(LS_MODEL, id);
         lastChosenModel = id;
         markDownloaded(id);
+        renderAvailableModels();
         renderDownloads();
         updateModelBadges();
         log('Model ready: ' + id);
@@ -888,8 +927,160 @@
      function getDownloadedSet(){ try{ const arr=JSON.parse(localStorage.getItem(LS_DOWNLOADED)||'[]'); return new Set(arr); }catch{ return new Set(); } }
      function setDownloadedSet(s){ localStorage.setItem(LS_DOWNLOADED, JSON.stringify([...s])); }
      function markDownloaded(id){ const s=getDownloadedSet(); s.add(id); setDownloadedSet(s); }
-     function renderDownloads(){ if(!downloadsList) return; const s=getDownloadedSet(); downloadsList.innerHTML=''; if(!s.size){ const d=document.createElement('div'); d.style.padding='12px'; d.textContent='No downloaded models tracked yet.'; downloadsList.appendChild(d); return; } [...s].forEach(id=>{ const row=document.createElement('div'); row.className='downloadItem'; const left=document.createElement('div'); left.textContent=id; const del=document.createElement('button'); del.className='delBtn'; del.textContent='Delete'; del.onclick=()=> deleteDownloadedModel(id); row.append(left, del); downloadsList.appendChild(row); }); }
-     async function deleteDownloadedModel(id){ try{ const s=getDownloadedSet(); s.delete(id); setDownloadedSet(s); renderDownloads(); log('Deleted tracked model: '+id+' (cache removal best-effort)'); }catch(e){ log('Delete error: '+(e?.message||e)); } }
+     function getModelSize(modelId) {
+       const id = (modelId || '').toLowerCase();
+       if (/0\.5b|tiny|mini/i.test(id)) return { label: 'Tiny', class: 'small', size: '0.5B' };
+       if (/1\.5b|1b|small/i.test(id)) return { label: 'Small', class: 'small', size: '1-1.5B' };
+       if (/3b|2b/i.test(id)) return { label: 'Medium', class: 'medium', size: '2-3B' };
+       if (/7b|8b/i.test(id)) return { label: 'Large', class: 'large', size: '7-8B' };
+       if (/13b|14b/i.test(id)) return { label: 'XL', class: 'large', size: '13-14B' };
+       return { label: 'Unknown', class: 'medium', size: '?' };
+     }
+     
+     function createModelCard(modelId, isDownloaded = false) {
+       const card = document.createElement('div');
+       card.className = 'downloadItem';
+       const sizeInfo = getModelSize(modelId);
+       const cached = isDownloaded;
+       
+       const header = document.createElement('div');
+       header.className = 'downloadItemHeader';
+       
+       const nameDiv = document.createElement('div');
+       nameDiv.className = 'downloadItemName';
+       nameDiv.textContent = modelId;
+       nameDiv.title = modelId;
+       
+       const metaDiv = document.createElement('div');
+       metaDiv.className = 'downloadItemMeta';
+       
+       const sizeBadge = document.createElement('span');
+       sizeBadge.className = `modelBadge ${sizeInfo.class}`;
+       sizeBadge.textContent = sizeInfo.size;
+       
+       if (cached) {
+         const cachedBadge = document.createElement('span');
+         cachedBadge.className = 'modelBadge cached';
+         cachedBadge.textContent = '✓ Cached';
+         metaDiv.appendChild(cachedBadge);
+       }
+       
+       metaDiv.appendChild(sizeBadge);
+       
+       header.appendChild(nameDiv);
+       
+       const actions = document.createElement('div');
+       actions.className = 'downloadItemActions';
+       
+       if (isDownloaded) {
+         const loadBtn = document.createElement('button');
+         loadBtn.className = 'downloadItemBtn primary';
+         loadBtn.textContent = 'Load';
+         loadBtn.onclick = () => {
+           if (modelSel) modelSel.value = modelId;
+           loadSelectedModel();
+           toggleLogs(false);
+         };
+         actions.appendChild(loadBtn);
+         
+         const delBtn = document.createElement('button');
+         delBtn.className = 'downloadItemBtn danger';
+         delBtn.textContent = 'Delete';
+         delBtn.onclick = () => deleteDownloadedModel(modelId);
+         actions.appendChild(delBtn);
+       } else {
+         const downloadBtn = document.createElement('button');
+         downloadBtn.className = 'downloadItemBtn primary';
+         downloadBtn.textContent = 'Download';
+         downloadBtn.onclick = () => {
+           if (modelSel) modelSel.value = modelId;
+           loadSelectedModel();
+           toggleLogs(false);
+         };
+         actions.appendChild(downloadBtn);
+       }
+       
+       card.appendChild(header);
+       card.appendChild(metaDiv);
+       card.appendChild(actions);
+       
+       return card;
+     }
+     
+     function renderAvailableModels() {
+       if (!availableModelsGrid) return;
+       try {
+         const list = (webllm?.prebuiltAppConfig?.model_list) || [];
+         availableModelsGrid.innerHTML = '';
+         
+         // Filter and prioritize small models
+         const smallModels = list.filter(rec => {
+           const id = (rec?.model_id || '').toLowerCase();
+           return /0\.5b|1\.5b|1b|tiny|mini|small/i.test(id);
+         });
+         
+         const otherModels = list.filter(rec => {
+           const id = (rec?.model_id || '').toLowerCase();
+           return !/0\.5b|1\.5b|1b|tiny|mini|small/i.test(id);
+         });
+         
+         // Sort small models by size
+         const sortedSmall = [...smallModels].sort((a, b) => {
+           const aId = (a.model_id || '').toLowerCase();
+           const bId = (b.model_id || '').toLowerCase();
+           const aHas05 = /0\.5b|tiny/i.test(aId);
+           const bHas05 = /0\.5b|tiny/i.test(bId);
+           if (aHas05 && !bHas05) return -1;
+           if (!aHas05 && bHas05) return 1;
+           return aId.localeCompare(bId);
+         });
+         
+         // Show small models first, then others (limit to 30 total)
+         const allModels = [...sortedSmall, ...otherModels].slice(0, 30);
+         const downloadedSet = getDownloadedSet();
+         
+         allModels.forEach(rec => {
+           const modelId = rec?.model_id;
+           if (!modelId) return;
+           const isDownloaded = downloadedSet.has(modelId);
+           const card = createModelCard(modelId, isDownloaded);
+           availableModelsGrid.appendChild(card);
+         });
+         
+         if (allModels.length === 0) {
+           const empty = document.createElement('div');
+           empty.className = 'emptyState';
+           empty.innerHTML = '<div class="emptyStateIcon">📦</div><div>No models available</div>';
+           availableModelsGrid.appendChild(empty);
+         }
+       } catch(e) {
+         log('renderAvailableModels error: ' + (e?.message||e));
+       }
+     }
+     
+     function renderDownloads(){
+       if(!downloadedModelsGrid) return;
+       try {
+         const s = getDownloadedSet();
+         downloadedModelsGrid.innerHTML = '';
+         
+         if(!s.size){
+           const empty = document.createElement('div');
+           empty.className = 'emptyState';
+           empty.innerHTML = '<div class="emptyStateIcon">📥</div><div>No downloaded models yet.<br>Download a model from the list above.</div>';
+           downloadedModelsGrid.appendChild(empty);
+           return;
+         }
+         
+         [...s].sort().forEach(id => {
+           const card = createModelCard(id, true);
+           downloadedModelsGrid.appendChild(card);
+         });
+       } catch(e) {
+         log('renderDownloads error: ' + (e?.message||e));
+       }
+     }
+     async function deleteDownloadedModel(id){ try{ const s=getDownloadedSet(); s.delete(id); setDownloadedSet(s); renderAvailableModels(); renderDownloads(); log('Deleted tracked model: '+id+' (cache removal best-effort)'); }catch(e){ log('Delete error: '+(e?.message||e)); } }
      async function clearAllModelCachesFn(){ log('Attempting to clear WebLLM caches'); try{ if (indexedDB.databases){ const dbs=await indexedDB.databases(); for(const db of dbs){ const name=db.name||''; if(name && (name.startsWith('mlc') || name.toLowerCase().includes('webllm'))){ await new Promise(res=>{ const rq=indexedDB.deleteDatabase(name); rq.onsuccess=rq.onerror=rq.onblocked=()=>res(); }); log('Deleted IndexedDB: '+name); } } } else { log('indexedDB.databases() not supported'); } } catch(e){ log('Clear caches error: '+(e?.message||e)); } }
      
      // Export/Import model functions
@@ -1059,6 +1250,7 @@
          }
          // Mark model as downloaded
          markDownloaded(modelId);
+         renderAvailableModels();
          renderDownloads();
          updateModelBadges();
          add('bot', `Model ${modelId} imported successfully! ${importedCount} database(s) restored.`);
@@ -1205,9 +1397,9 @@
      // Tabs and manager actions
      if (tabDownloads) tabDownloads.onclick = ()=> setActiveTab('downloads');
      if (tabLogs) tabLogs.onclick = ()=> setActiveTab('logs');
-    if (refreshDownloads) refreshDownloads.onclick = ()=> { renderDownloads(); updateModelBadges(); };
+    if (refreshDownloads) refreshDownloads.onclick = ()=> { renderAvailableModels(); renderDownloads(); updateModelBadges(); };
      if (clearAllCaches) clearAllCaches.onclick = ()=> clearAllModelCachesFn();
-     if (clearDownloadsTrack) clearDownloadsTrack.onclick = ()=> { localStorage.removeItem(LS_DOWNLOADED); renderDownloads(); updateModelBadges(); };
+     if (clearDownloadsTrack) clearDownloadsTrack.onclick = ()=> { localStorage.removeItem(LS_DOWNLOADED); renderAvailableModels(); renderDownloads(); updateModelBadges(); };
      // Export/Import handlers
      const exportModelBtn = $('#exportModelBtn');
      const importModelBtn = $('#importModelBtn');
@@ -1348,6 +1540,7 @@
      adjustPad();
      if (!('gpu' in navigator)) { gpuWarn.style.display = 'block'; }
      populateModels().then(()=>{ updateModelBadges(); }).catch(()=>{});
+     renderAvailableModels();
      renderDownloads();
      buddyMemory = loadMemory();
      updateQueueLabel();

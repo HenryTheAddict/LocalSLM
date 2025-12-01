@@ -330,6 +330,10 @@
     let buddyMemory = null;
     let engine = null;
     let lastChosenModel = localStorage.getItem(LS_MODEL) || '';
+    let activeRequestTimeout = null;
+    let requestStartTime = null;
+    const REQUEST_TIMEOUT_MS = 120000; // 2 minutes timeout
+    const STUCK_REQUEST_MS = 30000; // 30 seconds to detect stuck requests
 
     // Logging
     const logs = [];
@@ -586,12 +590,33 @@
       saveChat();
     }
     async function ensureEngine(){
-      if (!('gpu' in navigator)) return null;
+      // Better Chrome WebGPU detection
+      if (!('gpu' in navigator)) {
+        // Try to request adapter for better detection
+        try {
+          const adapter = await navigator.gpu?.requestAdapter();
+          if (!adapter) {
+            log('WebGPU adapter not available');
+            return null;
+          }
+        } catch(e) {
+          log('WebGPU check failed: ' + (e?.message||e));
+          return null;
+        }
+      }
       if (engine) return engine;
-      await loadSelectedModel();
+      try {
+        await Promise.race([
+          loadSelectedModel(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Model load timeout')), 60000))
+        ]);
+      } catch(e) {
+        log('Engine initialization failed: ' + (e?.message||e));
+        return null;
+      }
       return engine;
     }
-    async function replyLLM(userText){
+    async function replyLLM(userText, retryCount = 0){
       const t = ((tempEl && !Number.isNaN(tempEl.valueAsNumber)) ? tempEl.valueAsNumber : (parseFloat(tempEl ? tempEl.value : '1') || 1));
       const node = add('bot', '');
       // reset token stats
@@ -599,17 +624,55 @@
       if (tpsAvgEl) tpsAvgEl.textContent = '0';
       let emitted = 0; const t0 = performance.now();
       stopRequested = false;
+      requestStartTime = Date.now();
+      
+      // Clear any existing timeout
+      if (activeRequestTimeout) {
+        clearTimeout(activeRequestTimeout);
+        activeRequestTimeout = null;
+      }
+      
+      // Set timeout to detect stuck requests
+      activeRequestTimeout = setTimeout(() => {
+        if (node.textContent.trim() === '') {
+          log('Request appears stuck, attempting recovery...');
+          node.textContent = 'Response is taking longer than expected. Trying fallback...';
+          stopRequested = true;
+          // Force fallback after timeout
+          setTimeout(() => {
+            if (node.textContent.includes('trying fallback')) {
+              const resp = quickIntent(userText) || markovGen(fallbackModel, userText, 100, t);
+              node.textContent = resp;
+              history.push({ role:'assistant', content: resp });
+              saveChat();
+              busy = false;
+            }
+          }, 2000);
+        }
+      }, STUCK_REQUEST_MS);
+      
       try{
-        const eng = await ensureEngine();
+        // Check connection status
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+          throw new Error('Offline - using local fallback');
+        }
+        
+        const eng = await Promise.race([
+          ensureEngine(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Engine initialization timeout')), 15000))
+        ]);
+        
         if (!eng){
           log('Using fallback responder');
           const quick = quickIntent(userText);
-          const resp = quick || markovGen(fallbackModel, userText, 80, t);
+          const resp = quick || markovGen(fallbackModel, userText, 100, t);
           await typeStream(node, resp);
           history.push({ role:'assistant', content: node.textContent });
           saveChat();
+          if (activeRequestTimeout) { clearTimeout(activeRequestTimeout); activeRequestTimeout = null; }
           return;
         }
+        
         log('Starting streaming response');
         // Ensure chat history is valid for the model API
         function sanitizeHistoryForLLM(hist, userText){
@@ -627,48 +690,159 @@
           if (!arr.length || !['user','tool'].includes(arr[arr.length-1].role)){
             arr.push({ role:'user', content: String(userText||'') || 'Hello' });
           }
+          // Limit history length for performance (keep last 20 messages)
+          if (arr.length > 22) {
+            arr.splice(1, arr.length - 22);
+          }
           return arr;
         }catch{ return [{ role:'system', content:'You are a concise, helpful AI assistant.' }, { role:'user', content: String(userText||'')||'Hello' }]; }
         }
         const safeMessages = sanitizeHistoryForLLM(history, userText);
-        const chunks = await eng.chat.completions.create({ messages: safeMessages, temperature: t, stream: true, stream_options: { include_usage: true } });
+        
+        // Create streaming request with timeout
+        const streamPromise = eng.chat.completions.create({ 
+          messages: safeMessages, 
+          temperature: t, 
+          stream: true, 
+          stream_options: { include_usage: true } 
+        });
+        
+        const chunks = await Promise.race([
+          streamPromise,
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Stream timeout')), REQUEST_TIMEOUT_MS))
+        ]);
+        
         let acc = '';
-        for await (const ch of chunks){
-          if (stopRequested) { log('Streaming stopped'); break; }
-          const delta = ch?.choices?.[0]?.delta?.content || '';
-          if (delta){ acc += delta; node.textContent = acc; msgs.scrollTop = msgs.scrollHeight; }
-          const used = ch?.usage?.completion_tokens;
-          if (typeof used === 'number') emitted = used; else if (delta) emitted += Math.max(1, Math.round(delta.length/4));
-          const dt = Math.max(1, (performance.now()-t0)/1000);
-          if (tokCountEl) tokCountEl.textContent = String(emitted);
-          if (tpsAvgEl) tpsAvgEl.textContent = (emitted/dt).toFixed(1);
+        let lastUpdateTime = Date.now();
+        let hasReceivedData = false;
+        
+        try {
+          for await (const ch of chunks){
+            if (stopRequested) { log('Streaming stopped'); break; }
+            
+            lastUpdateTime = Date.now();
+            const delta = ch?.choices?.[0]?.delta?.content || '';
+            if (delta){ 
+              hasReceivedData = true;
+              acc += delta; 
+              node.textContent = acc; 
+              msgs.scrollTop = msgs.scrollHeight; 
+            }
+            const used = ch?.usage?.completion_tokens;
+            if (typeof used === 'number') emitted = used; 
+            else if (delta) emitted += Math.max(1, Math.round(delta.length/4));
+            const dt = Math.max(1, (performance.now()-t0)/1000);
+            if (tokCountEl) tokCountEl.textContent = String(emitted);
+            if (tpsAvgEl) tpsAvgEl.textContent = (emitted/dt).toFixed(1);
+            
+            // Check for stuck stream (no data for 10 seconds)
+            if (hasReceivedData && (Date.now() - lastUpdateTime) > 10000) {
+              log('Stream appears stuck, breaking');
+              break;
+            }
+          }
+        } catch(streamError) {
+          log('Stream iteration error: ' + (streamError?.message||streamError));
+          if (!hasReceivedData && retryCount < 2) {
+            log(`Retrying request (attempt ${retryCount + 1})...`);
+            if (activeRequestTimeout) { clearTimeout(activeRequestTimeout); activeRequestTimeout = null; }
+            return replyLLM(userText, retryCount + 1);
+          }
+          throw streamError;
         }
-        applyToolBlocks(node.textContent);
-        const pv = codePreviewFromBlocks(node.textContent); if (pv) addBotRich('Preview:', pv);
-        history.push({ role:'assistant', content: node.textContent });
-        saveChat();
+        
+        // If we got some content, use it; otherwise fallback
+        if (acc.trim()) {
+          applyToolBlocks(node.textContent);
+          const pv = codePreviewFromBlocks(node.textContent); 
+          if (pv) addBotRich('Preview:', pv);
+          history.push({ role:'assistant', content: node.textContent });
+          saveChat();
+        } else if (!hasReceivedData && retryCount < 2) {
+          log(`No data received, retrying (attempt ${retryCount + 1})...`);
+          if (activeRequestTimeout) { clearTimeout(activeRequestTimeout); activeRequestTimeout = null; }
+          return replyLLM(userText, retryCount + 1);
+        } else {
+          throw new Error('No response received from model');
+        }
+        
+        if (activeRequestTimeout) { clearTimeout(activeRequestTimeout); activeRequestTimeout = null; }
       } catch(e){
         console.error(e);
-        node.textContent = 'There was an error generating a response. Falling back locally.';
-        log('Error during generation, falling back: ' + (e?.message||e));
-        const resp = markovGen(fallbackModel, userText, 80, t);
-        await typeStream(node, resp);
-        history.push({ role:'assistant', content: node.textContent });
-        saveChat();
+        if (activeRequestTimeout) { clearTimeout(activeRequestTimeout); activeRequestTimeout = null; }
+        
+        // Retry logic for certain errors
+        if (retryCount < 2 && (
+          e?.message?.includes('timeout') || 
+          e?.message?.includes('network') ||
+          e?.message?.includes('failed') ||
+          !e?.message
+        )) {
+          log(`Retrying after error (attempt ${retryCount + 1}): ${e?.message||e}`);
+          await new Promise(r => setTimeout(r, 1000 * (retryCount + 1))); // Exponential backoff
+          return replyLLM(userText, retryCount + 1);
+        }
+        
+        // Final fallback
+        const errorMsg = e?.message || String(e);
+        if (!node.textContent || node.textContent.includes('trying fallback') || node.textContent.trim() === '') {
+          node.textContent = 'There was an error generating a response. Using local fallback.';
+          log('Error during generation, falling back: ' + errorMsg);
+          const resp = quickIntent(userText) || markovGen(fallbackModel, userText, 100, t);
+          await typeStream(node, resp);
+          history.push({ role:'assistant', content: node.textContent });
+          saveChat();
+        }
+      } finally {
+        requestStartTime = null;
+        if (activeRequestTimeout) { clearTimeout(activeRequestTimeout); activeRequestTimeout = null; }
       }
     }
-    async function typeStream(node, text){ node.textContent = ''; for (const ch of text){ node.textContent += ch; await new Promise(r=>setTimeout(r, 6 + Math.random()*8)); msgs.scrollTop = msgs.scrollHeight; } }
+    async function typeStream(node, text){ 
+      node.textContent = ''; 
+      // Faster typing for fallback responses
+      const delay = 3 + Math.random() * 4; // Reduced from 6-14ms to 3-7ms
+      for (const ch of text){ 
+        node.textContent += ch; 
+        await new Promise(r=>setTimeout(r, delay)); 
+        msgs.scrollTop = msgs.scrollHeight; 
+      } 
+    }
     function onSend(){
-      if (busy) return;
+      if (busy) {
+        // If stuck for too long, force reset
+        if (requestStartTime && (Date.now() - requestStartTime) > 60000) {
+          log('Forcing reset of stuck request');
+          busy = false;
+          stopRequested = true;
+          if (activeRequestTimeout) {
+            clearTimeout(activeRequestTimeout);
+            activeRequestTimeout = null;
+          }
+          requestStartTime = null;
+        } else {
+          return;
+        }
+      }
       const v = (input.value||'').trim();
       if (!v) return;
       busy = true;
+      stopRequested = false;
       add('user', v);
       history.push({ role:'user', content: v });
       log('User: ' + (v.length>120 ? v.slice(0,120)+'…' : v));
       input.value = '';
       updateSystemPrompt();
-      replyLLM(v).finally(()=>{ busy=false; saveChat(); processQueue(); });
+      replyLLM(v).finally(()=>{ 
+        busy=false; 
+        saveChat(); 
+        processQueue(); 
+        requestStartTime = null;
+        if (activeRequestTimeout) {
+          clearTimeout(activeRequestTimeout);
+          activeRequestTimeout = null;
+        }
+      });
     }
 
     // Settings persistence (theme, accent, language)
@@ -1107,7 +1281,16 @@
      if (saveMem) saveMem.onclick = ()=>{ try{ if (memInput){ const obj = JSON.parse(memInput.value||'{}'); buddyMemory = obj; saveMemory(); log('Memory saved'); } }catch(e){ log('Save memory error: '+(e?.message||e)); } finally { if (memModal) memModal.style.display='none'; } };
      // Queue/Stop handlers
      if (queueBtn) queueBtn.onclick = ()=>{ const v=(input.value||'').trim(); if(!v) return; enqueue(v); input.value=''; };
-     if (stopBtn) stopBtn.onclick = ()=>{ stopRequested = true; log('Stop requested'); };
+     if (stopBtn) stopBtn.onclick = ()=>{ 
+       stopRequested = true; 
+       log('Stop requested'); 
+       if (activeRequestTimeout) {
+         clearTimeout(activeRequestTimeout);
+         activeRequestTimeout = null;
+       }
+       busy = false;
+       requestStartTime = null;
+     };
      // Memory-in-prompt toggle
      if (memInPromptEl) {
        try { memInPromptEl.checked = localStorage.getItem(LS_MEMORY_IN_PROMPT) === '1'; } catch {}
@@ -1169,6 +1352,21 @@
      buddyMemory = loadMemory();
      updateQueueLabel();
      adjustPad();
+     // Connection status monitoring for Chrome
+     if (typeof window !== 'undefined') {
+       window.addEventListener('online', () => {
+         log('Connection restored');
+         if (statusEl) statusEl.textContent = 'Engine: online';
+       });
+       window.addEventListener('offline', () => {
+         log('Connection lost');
+         if (statusEl) statusEl.textContent = 'Engine: offline';
+         if (busy && requestStartTime) {
+           // If we're in the middle of a request and go offline, fallback faster
+           stopRequested = true;
+         }
+       });
+     }
      // Panic key: press P and A simultaneously to black out the screen
      const pressedKeys = new Set();
      document.addEventListener('keydown', (e)=>{

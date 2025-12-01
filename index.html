@@ -164,6 +164,9 @@
             <button id="refreshDownloads" class="btn ghost">Refresh</button>
             <button id="clearAllCaches" class="btn ghost">Clear Caches</button>
             <button id="clearDownloadsTrack" class="btn ghost">Clear Track</button>
+            <button id="exportModelBtn" class="btn">Export Model</button>
+            <button id="importModelBtn" class="btn">Import Model</button>
+            <input type="file" id="importModelFile" accept=".zip" style="display:none" />
           </div>
           <div id="downloadsList"></div>
         </div>
@@ -209,6 +212,8 @@
 
   <!-- Panic overlay for quick screen blackout -->
   <div id="panicOverlay" class="panicOverlay" aria-hidden="true" title="Panic screen. Press Esc or click to exit."></div>
+  <!-- JSZip for model import/export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <!-- Main app (module) -->
   <script type="module">
     import * as webllm from "https://esm.run/@mlc-ai/web-llm";
@@ -655,6 +660,296 @@
      function renderDownloads(){ if(!downloadsList) return; const s=getDownloadedSet(); downloadsList.innerHTML=''; if(!s.size){ const d=document.createElement('div'); d.style.padding='12px'; d.textContent='No downloaded models tracked yet.'; downloadsList.appendChild(d); return; } [...s].forEach(id=>{ const row=document.createElement('div'); row.className='downloadItem'; const left=document.createElement('div'); left.textContent=id; const del=document.createElement('button'); del.className='delBtn'; del.textContent='Delete'; del.onclick=()=> deleteDownloadedModel(id); row.append(left, del); downloadsList.appendChild(row); }); }
      async function deleteDownloadedModel(id){ try{ const s=getDownloadedSet(); s.delete(id); setDownloadedSet(s); renderDownloads(); log('Deleted tracked model: '+id+' (cache removal best-effort)'); }catch(e){ log('Delete error: '+(e?.message||e)); } }
      async function clearAllModelCachesFn(){ log('Attempting to clear WebLLM caches'); try{ if (indexedDB.databases){ const dbs=await indexedDB.databases(); for(const db of dbs){ const name=db.name||''; if(name && (name.startsWith('mlc') || name.toLowerCase().includes('webllm'))){ await new Promise(res=>{ const rq=indexedDB.deleteDatabase(name); rq.onsuccess=rq.onerror=rq.onblocked=()=>res(); }); log('Deleted IndexedDB: '+name); } } } else { log('indexedDB.databases() not supported'); } } catch(e){ log('Clear caches error: '+(e?.message||e)); } }
+     
+     // Export/Import model functions
+     async function exportModel(modelId){
+       if (!modelId) {
+         const selected = modelSel?.value;
+         if (!selected) {
+           add('bot', 'Please select a model to export first.');
+           log('Export failed: No model selected');
+           return;
+         }
+         modelId = selected;
+       }
+       log(`Starting export of model: ${modelId}`);
+       try {
+         if (typeof JSZip === 'undefined') {
+           add('bot', 'JSZip library not loaded. Please refresh the page.');
+           log('Export failed: JSZip not available');
+           return;
+         }
+         const zip = new JSZip();
+         // Get all IndexedDB databases - WebLLM stores models in databases with mlc prefix
+         const dbs = await indexedDB.databases();
+         // Filter for WebLLM-related databases (they typically start with 'mlc' or contain 'webllm')
+         // We export all WebLLM databases since they may contain the model data
+         const modelDbs = dbs.filter(db => {
+           const name = (db.name || '').toLowerCase();
+           return name.startsWith('mlc') || name.includes('webllm') || name.includes(modelId.toLowerCase());
+         });
+         if (modelDbs.length === 0) {
+           add('bot', `Model ${modelId} not found in cache. Please load it first.`);
+           log(`Export failed: Model ${modelId} not in cache`);
+           return;
+         }
+         log(`Found ${modelDbs.length} database(s) to export`);
+         // Export each database
+         let exportedCount = 0;
+         for (const dbInfo of modelDbs) {
+           const dbName = dbInfo.name;
+           try {
+             log(`Exporting database: ${dbName}`);
+             const dbData = await exportIndexedDB(dbName);
+             if (dbData && Object.keys(dbData).length > 0) {
+               zip.folder('databases').file(`${dbName}.json`, JSON.stringify(dbData, null, 2));
+               exportedCount++;
+               log(`Exported ${Object.keys(dbData).length} object store(s) from ${dbName}`);
+             }
+           } catch(e) {
+             log(`Error exporting database ${dbName}: ${e.message}`);
+           }
+         }
+         if (exportedCount === 0) {
+           add('bot', 'No data found to export. The model may not be fully cached.');
+           log('Export failed: No data exported');
+           return;
+         }
+         // Add metadata
+         const metadata = {
+           modelId: modelId,
+           exportedAt: new Date().toISOString(),
+           version: '1.0',
+           databaseCount: exportedCount
+         };
+         zip.file('metadata.json', JSON.stringify(metadata, null, 2));
+         // Generate and download ZIP
+         const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+         const url = URL.createObjectURL(blob);
+         const a = document.createElement('a');
+         a.href = url;
+         a.download = `model-${modelId.replace(/[^a-z0-9]/gi, '_')}-${Date.now()}.zip`;
+         document.body.appendChild(a);
+         a.click();
+         document.body.removeChild(a);
+         URL.revokeObjectURL(url);
+         add('bot', `Model ${modelId} exported successfully! (${exportedCount} database(s))`);
+         log(`Export completed: ${modelId} (${exportedCount} databases)`);
+       } catch(e) {
+         add('bot', `Export failed: ${e.message}`);
+         log('Export error: ' + (e?.message||e));
+       }
+     }
+     
+     async function exportIndexedDB(dbName) {
+       return new Promise((resolve, reject) => {
+         const request = indexedDB.open(dbName);
+         request.onerror = () => reject(new Error(`Failed to open database: ${dbName}`));
+         request.onsuccess = () => {
+           const db = request.result;
+           const data = {};
+           const objectStoreNames = db.objectStoreNames;
+           let completed = 0;
+           const total = objectStoreNames.length;
+           if (total === 0) {
+             resolve(data);
+             db.close();
+             return;
+           }
+           for (const storeName of objectStoreNames) {
+             const transaction = db.transaction([storeName], 'readonly');
+             const store = transaction.objectStore(storeName);
+             const allRequest = store.getAll();
+             allRequest.onsuccess = () => {
+               data[storeName] = allRequest.result;
+               completed++;
+               if (completed === total) {
+                 resolve(data);
+                 db.close();
+               }
+             };
+             allRequest.onerror = () => {
+               log(`Error reading store ${storeName}: ${allRequest.error}`);
+               completed++;
+               if (completed === total) {
+                 resolve(data);
+                 db.close();
+               }
+             };
+           }
+         };
+       });
+     }
+     
+     async function importModel(file) {
+       if (!file) {
+         const input = document.getElementById('importModelFile');
+         if (input) input.click();
+         return;
+       }
+       log(`Starting import of model from: ${file.name}`);
+       try {
+         if (typeof JSZip === 'undefined') {
+           add('bot', 'JSZip library not loaded. Please refresh the page.');
+           log('Import failed: JSZip not available');
+           return;
+         }
+         const zip = await JSZip.loadAsync(file);
+         // Read metadata
+         const metadataFile = zip.file('metadata.json');
+         if (!metadataFile) {
+           add('bot', 'Invalid model file: metadata.json not found.');
+           log('Import failed: Missing metadata');
+           return;
+         }
+         const metadata = JSON.parse(await metadataFile.async('string'));
+         const modelId = metadata.modelId;
+         if (!modelId) {
+           add('bot', 'Invalid model file: model ID not found.');
+           log('Import failed: Missing model ID');
+           return;
+         }
+         log(`Importing model: ${modelId}`);
+         // Import databases
+         const dbFolder = zip.folder('databases');
+         if (!dbFolder) {
+           add('bot', 'Invalid model file: databases folder not found.');
+           log('Import failed: Missing databases folder');
+           return;
+         }
+         let importedCount = 0;
+         for (const [path, entry] of Object.entries(dbFolder.files)) {
+           if (entry.dir) continue;
+           const dbName = path.replace('.json', '');
+           log(`Importing database: ${dbName}`);
+           const dbData = JSON.parse(await entry.async('string'));
+           await importIndexedDB(dbName, dbData);
+           importedCount++;
+         }
+         // Mark model as downloaded
+         markDownloaded(modelId);
+         renderDownloads();
+         updateModelBadges();
+         add('bot', `Model ${modelId} imported successfully! ${importedCount} database(s) restored.`);
+         log(`Import completed: ${modelId} (${importedCount} databases)`);
+       } catch(e) {
+         add('bot', `Import failed: ${e.message}`);
+         log('Import error: ' + (e?.message||e));
+       }
+     }
+     
+     async function importIndexedDB(dbName, data) {
+       return new Promise((resolve, reject) => {
+         // Delete existing database if it exists
+         const deleteRequest = indexedDB.deleteDatabase(dbName);
+         deleteRequest.onsuccess = deleteRequest.onerror = () => {
+           // Create new database with version 1
+           const openRequest = indexedDB.open(dbName, 1);
+           openRequest.onerror = () => reject(new Error(`Failed to open database: ${dbName}`));
+           openRequest.onupgradeneeded = (event) => {
+             const db = event.target.result;
+             // Create object stores based on imported data
+             for (const [storeName, records] of Object.entries(data)) {
+               if (!db.objectStoreNames.contains(storeName)) {
+                 // Try to determine keyPath from first record
+                 let keyPath = null;
+                 let autoIncrement = false;
+                 if (records.length > 0) {
+                   const firstRecord = records[0];
+                   // Common keyPath patterns in WebLLM
+                   if ('key' in firstRecord) keyPath = 'key';
+                   else if ('id' in firstRecord) keyPath = 'id';
+                   else if ('url' in firstRecord) keyPath = 'url';
+                 }
+                 const store = keyPath 
+                   ? db.createObjectStore(storeName, { keyPath: keyPath })
+                   : db.createObjectStore(storeName, { autoIncrement: true });
+                 // Try to create indexes if records have common fields
+                 if (records.length > 0) {
+                   const firstRecord = records[0];
+                   if ('key' in firstRecord && keyPath !== 'key') {
+                     try { store.createIndex('key', 'key', { unique: true }); } catch {}
+                   }
+                 }
+               }
+             }
+           };
+           openRequest.onsuccess = () => {
+             const db = openRequest.result;
+             if (Object.keys(data).length === 0) {
+               resolve();
+               db.close();
+               return;
+             }
+             // First, clear all stores, then add data
+             const storeNames = Object.keys(data);
+             const clearPromises = storeNames.map(storeName => {
+               return new Promise((resolveClear) => {
+                 const tx = db.transaction([storeName], 'readwrite');
+                 const store = tx.objectStore(storeName);
+                 const clearReq = store.clear();
+                 clearReq.onsuccess = clearReq.onerror = () => resolveClear();
+                 tx.onerror = () => resolveClear(); // Continue even if clear fails
+               });
+             });
+             
+             Promise.all(clearPromises).then(() => {
+               // Now add all records
+               const transaction = db.transaction(storeNames, 'readwrite');
+               let totalRecords = 0;
+               let addedRecords = 0;
+               let errorCount = 0;
+               
+               for (const [storeName, records] of Object.entries(data)) {
+                 const store = transaction.objectStore(storeName);
+                 totalRecords += records.length;
+                 
+                 for (const record of records) {
+                   const req = store.add(record);
+                   req.onsuccess = () => {
+                     addedRecords++;
+                     if (addedRecords + errorCount === totalRecords) {
+                       resolve();
+                       db.close();
+                     }
+                   };
+                   req.onerror = () => {
+                     // Try put if add fails (e.g., key already exists)
+                     const putReq = store.put(record);
+                     putReq.onsuccess = () => {
+                       addedRecords++;
+                       if (addedRecords + errorCount === totalRecords) {
+                         resolve();
+                         db.close();
+                       }
+                     };
+                     putReq.onerror = () => {
+                       errorCount++;
+                       log(`Error importing record in ${storeName}: ${putReq.error}`);
+                       if (addedRecords + errorCount === totalRecords) {
+                         resolve();
+                         db.close();
+                       }
+                     };
+                   };
+                 }
+               }
+               
+               if (totalRecords === 0) {
+                 resolve();
+                 db.close();
+               }
+               
+               transaction.onerror = () => {
+                 log(`Transaction error for ${dbName}: ${transaction.error}`);
+                 resolve(); // Continue with other databases
+                 db.close();
+               };
+             });
+           };
+         };
+       });
+     }
     function updateModelBadges(){
       try{
         if (!modelSel) return;
@@ -682,6 +977,17 @@
     if (refreshDownloads) refreshDownloads.onclick = ()=> { renderDownloads(); updateModelBadges(); };
      if (clearAllCaches) clearAllCaches.onclick = ()=> clearAllModelCachesFn();
      if (clearDownloadsTrack) clearDownloadsTrack.onclick = ()=> { localStorage.removeItem(LS_DOWNLOADED); renderDownloads(); updateModelBadges(); };
+     // Export/Import handlers
+     const exportModelBtn = $('#exportModelBtn');
+     const importModelBtn = $('#importModelBtn');
+     const importModelFile = $('#importModelFile');
+     if (exportModelBtn) exportModelBtn.onclick = () => exportModel();
+     if (importModelBtn) importModelBtn.onclick = () => importModel();
+     if (importModelFile) importModelFile.addEventListener('change', (e) => {
+       const file = e.target.files?.[0];
+       if (file) importModel(file);
+       e.target.value = ''; // Reset input
+     });
      // App actions
      input.addEventListener('keydown', e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); onSend(); }});
      sendBtn.onclick = onSend;

@@ -50,10 +50,37 @@
     .panelBody { display:flex; flex-direction:column }
     #downloadsBody { display:none }
     #logsBody { display:none }
-    #downloadsList { padding:12px; max-height:60vh; overflow:auto }
-    .downloadItem { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 10px; border-bottom:1px solid #1f2230; font-size:13px }
+    #downloadsList { padding:16px; max-height:60vh; overflow:auto }
+    .downloadsGrid { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:12px; margin-bottom:16px }
+    .downloadItem { background:#1b1f2b; border:1px solid #2a2d3a; border-radius:12px; padding:12px; display:flex; flex-direction:column; gap:8px; transition:all 0.2s ease }
+    .downloadItem:hover { border-color:var(--accent); background:#1f2330; transform:translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,0.3) }
+    .downloadItemHeader { display:flex; align-items:center; justify-content:space-between; gap:8px }
+    .downloadItemName { font-weight:600; font-size:14px; color:var(--fg); word-break:break-word; flex:1 }
+    .downloadItemMeta { display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:11px; color:var(--mut) }
+    .modelBadge { background:var(--accent); color:#fff; padding:2px 6px; border-radius:6px; font-size:10px; font-weight:600; text-transform:uppercase }
+    .modelBadge.small { background:#4ade80; }
+    .modelBadge.medium { background:#fbbf24; }
+    .modelBadge.large { background:#ef4444; }
+    .modelBadge.cached { background:#10b981; }
+    .downloadItemActions { display:flex; gap:6px; margin-top:4px }
+    .downloadItemBtn { background:transparent; border:1px solid #2a2d3a; color:var(--fg); padding:6px 10px; border-radius:8px; font-size:11px; cursor:pointer; transition:all 0.2s }
+    .downloadItemBtn:hover { background:#2a2d3a; border-color:var(--accent) }
+    .downloadItemBtn.danger { border-color:#523; color:#fca5a5 }
+    .downloadItemBtn.danger:hover { background:#2b1b1b; border-color:#fca5a5 }
+    .downloadItemBtn.primary { background:var(--accent); border-color:var(--accent); color:#fff }
+    .downloadItemBtn.primary:hover { opacity:0.9 }
     .delBtn { background:#2b1b1b; color:#fca5a5; border:1px solid #523; padding:4px 8px; border-radius:8px; font-size:12px }
-    .mgrBtns { display:flex; gap:8px; padding:8px 12px; border-top:1px solid #1f2230; background:#0f1117 }
+    .mgrBtns { display:flex; gap:8px; padding:12px 16px; border-top:1px solid #1f2230; background:#0f1117; flex-wrap:wrap }
+    .downloadsSection { margin-bottom:20px }
+    .downloadsSectionTitle { font-size:14px; font-weight:600; color:var(--fg); margin-bottom:12px; display:flex; align-items:center; gap:8px }
+    .downloadsSectionTitle::before { content:''; width:3px; height:16px; background:var(--accent); border-radius:2px }
+    .emptyState { text-align:center; padding:40px 20px; color:var(--mut); font-size:14px }
+    .emptyStateIcon { font-size:48px; margin-bottom:12px; opacity:0.5 }
+    body.light .downloadItem { background:#f3f4f6; border-color:#e5e7eb }
+    body.light .downloadItem:hover { background:#ffffff; border-color:var(--accent) }
+    body.light .downloadItemBtn { border-color:#e5e7eb; color:#111827 }
+    body.light .downloadItemBtn:hover { background:#e5e7eb }
+    body.light .mgrBtns { background:#f3f4f6; border-color:#e5e7eb }
     .switch { display:inline-flex; align-items:center; gap:6px; padding:4px 8px; border-radius:10px; border:1px solid #333; user-select:none }
     .switch input { appearance:none; width:34px; height:20px; background:#222; border-radius:999px; position:relative; outline:none; cursor:pointer; border:1px solid #333 }
     .switch input:checked { background:#4ade80; border-color:#4ade80 }
@@ -105,6 +132,41 @@
     .modelMenuItem:hover { background:#1f2937 }
     body.light .modelMenuItem { border-bottom-color:#e5e7eb }
     body.light .modelMenuItem:hover { background:#f3f4f6 }
+    /* Model Selector */
+    .modelFilterBtn { background:#1b1f2b; color:var(--fg); border:1px solid #2a2d3a; padding:6px 12px; border-radius:8px; font-size:12px; cursor:pointer; transition:all 0.2s }
+    .modelFilterBtn:hover { background:#2a2d3a; border-color:var(--accent) }
+    .modelFilterBtn.active { background:var(--accent); border-color:var(--accent); color:#fff }
+    body.light .modelFilterBtn { background:#e5e7eb; border-color:#e5e7eb; color:#111827 }
+    body.light .modelFilterBtn:hover { background:#d1d5db }
+    body.light .modelFilterBtn.active { background:var(--accent); border-color:var(--accent); color:#fff }
+    .modelCard { background:#1b1f2b; border:2px solid #2a2d3a; border-radius:12px; padding:16px; display:flex; flex-direction:column; gap:10px; transition:all 0.2s; cursor:pointer; position:relative }
+    .modelCard:hover { border-color:var(--accent); transform:translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,0.3) }
+    .modelCard.selected { border-color:var(--accent); background:#1f2330; box-shadow:0 0 0 2px rgba(124,58,237,0.2) }
+    .modelCard.recommended::before { content:'⭐ Recommended'; position:absolute; top:8px; right:8px; background:var(--accent); color:#fff; padding:4px 8px; border-radius:6px; font-size:10px; font-weight:600 }
+    .modelCardHeader { display:flex; align-items:flex-start; justify-content:space-between; gap:8px }
+    .modelCardName { font-weight:600; font-size:15px; color:var(--fg); flex:1; line-height:1.3 }
+    .modelCardMeta { display:flex; flex-wrap:wrap; gap:6px; margin-top:4px }
+    .modelCardInfo { display:flex; flex-direction:column; gap:6px; margin-top:8px; font-size:12px; color:var(--mut) }
+    .modelCardInfoRow { display:flex; align-items:center; gap:8px }
+    .modelCardInfoIcon { width:16px; text-align:center }
+    .modelCardActions { display:flex; gap:8px; margin-top:8px }
+    .modelCardBtn { flex:1; padding:8px 12px; border-radius:8px; border:none; font-weight:600; font-size:13px; cursor:pointer; transition:all 0.2s }
+    .modelCardBtn.primary { background:var(--accent); color:#fff }
+    .modelCardBtn.primary:hover { opacity:0.9; transform:scale(1.02) }
+    .modelCardBtn.secondary { background:transparent; border:1px solid #2a2d3a; color:var(--fg) }
+    .modelCardBtn.secondary:hover { background:#2a2d3a; border-color:var(--accent) }
+    body.light .modelCard { background:#f3f4f6; border-color:#e5e7eb }
+    body.light .modelCard:hover { background:#ffffff; border-color:var(--accent) }
+    body.light .modelCard.selected { background:#ffffff; border-color:var(--accent) }
+    body.light .modelCardBtn.secondary { border-color:#e5e7eb; color:#111827 }
+    body.light .modelCardBtn.secondary:hover { background:#e5e7eb }
+    #modelSearch { transition:all 0.2s }
+    #modelSearch:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(124,58,237,0.1) }
+    body.light #modelSearch { background:#fff; border-color:#e5e7eb; color:#111827 }
+    body.light #modelSearch:focus { border-color:var(--accent) }
+    .recommendedSection { margin-bottom:24px }
+    .recommendedSectionTitle { font-size:16px; font-weight:600; color:var(--fg); margin-bottom:12px; display:flex; align-items:center; gap:8px }
+    .recommendedSectionTitle::before { content:'⭐'; font-size:18px }
   </style>
 </head>
 <body>
@@ -113,7 +175,10 @@
       <div class="title">Local AI</div>
       <div class="sub">Private, offline-friendly</div>
       <div class="toolbar">
-        <select id="modelSel" class="nice"></select>
+        <button id="modelSelectorBtn" class="btn ghost" style="display:flex; align-items:center; gap:6px;">
+          <span id="currentModelName">Select Model</span>
+          <span style="font-size:10px;">▼</span>
+        </button>
         <button id="loadModel" class="load">Load</button>
         <span class="status" id="engineStatus">Engine: idle</span>
         <span class="badge" id="gpuWarn" style="display:none">WebGPU not available</span>
@@ -121,13 +186,31 @@
           <input type="checkbox" id="simpleToggle" checked />
           <span>Simple</span>
         </label>
-        <select id="promptMode" class="nice">
-          <option value="default">Default</option>
-          <option value="genius">Genius</option>
-          <option value="rewriter">Rewriter</option>
-          <option value="programmer">Programmer</option>
-          <option value="buddy">Buddy</option>
-        </select>
+        <div id="personalityWrap" style="display:flex; align-items:center; gap:6px;">
+          <label id="personalityLabel" style="font-size:12px; color:var(--mut); display:none;">Personality:</label>
+          <select id="promptMode" class="nice" title="Change AI personality">
+            <option value="genius" selected>Genius</option>
+            <option value="default">Default</option>
+            <option value="teacher">Teacher</option>
+            <option value="creative">Creative</option>
+            <option value="analyst">Analyst</option>
+            <option value="storyteller">Storyteller</option>
+            <option value="coach">Coach</option>
+            <option value="scientist">Scientist</option>
+            <option value="poet">Poet</option>
+            <option value="critic">Critic</option>
+            <option value="mentor">Mentor</option>
+            <option value="explorer">Explorer</option>
+            <option value="optimist">Optimist</option>
+            <option value="realist">Realist</option>
+            <option value="philosopher">Philosopher</option>
+            <option value="translator">Translator</option>
+            <option value="summarizer">Summarizer</option>
+            <option value="rewriter">Rewriter</option>
+            <option value="programmer">Programmer</option>
+            <option value="buddy">Buddy</option>
+          </select>
+        </div>
         <button id="systemBtn" class="btn ghost">System</button>
         <button id="memoryBtn" class="btn ghost">Memory</button>
         <button id="creditsBtn" class="btn ghost">Credits</button>
@@ -184,15 +267,24 @@
           <button id="tabLogs" class="tab">Logs</button>
         </div>
         <div id="downloadsBody">
+          <div id="downloadsList">
+            <div class="downloadsSection">
+              <div class="downloadsSectionTitle">Available Models</div>
+              <div id="availableModelsGrid" class="downloadsGrid"></div>
+            </div>
+            <div class="downloadsSection">
+              <div class="downloadsSectionTitle">Downloaded Models</div>
+              <div id="downloadedModelsGrid" class="downloadsGrid"></div>
+            </div>
+          </div>
           <div class="mgrBtns">
-            <button id="refreshDownloads" class="btn ghost">Refresh</button>
-            <button id="clearAllCaches" class="btn ghost">Clear Caches</button>
+            <button id="refreshDownloads" class="btn ghost">🔄 Refresh</button>
+            <button id="clearAllCaches" class="btn ghost">🗑️ Clear Caches</button>
             <button id="clearDownloadsTrack" class="btn ghost">Clear Track</button>
-            <button id="exportModelBtn" class="btn">Export Model</button>
-            <button id="importModelBtn" class="btn">Import Model</button>
+            <button id="exportModelBtn" class="btn">📦 Export Model</button>
+            <button id="importModelBtn" class="btn">📥 Import Model</button>
             <input type="file" id="importModelFile" accept=".zip" style="display:none" />
           </div>
-          <div id="downloadsList"></div>
         </div>
         <div id="logsBody">
           <pre id="logBody"></pre>
@@ -224,6 +316,33 @@
     </div>
   </div>
 
+  <!-- Model Selector Modal -->
+  <div id="modelSelectorModal" class="creditsModal">
+    <div class="creditsPanel" style="width:min(900px, 96vw); max-height:85vh;">
+      <div class="creditsHead">
+        <div>Select AI Model</div>
+        <button id="closeModelSelector" class="btn ghost">Close</button>
+      </div>
+      <div class="creditsBody" style="padding:0; display:flex; flex-direction:column; max-height:75vh;">
+        <div style="padding:16px; border-bottom:1px solid #1f2230; background:#0f1117;">
+          <input type="text" id="modelSearch" placeholder="🔍 Search models..." style="width:100%; padding:10px; border-radius:8px; border:1px solid #2a2d3a; background:#0b0c10; color:var(--fg); font-size:14px; outline:none;" />
+          <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
+            <button class="modelFilterBtn active" data-filter="all">All</button>
+            <button class="modelFilterBtn" data-filter="small">Small (Fast)</button>
+            <button class="modelFilterBtn" data-filter="medium">Medium</button>
+            <button class="modelFilterBtn" data-filter="large">Large (Quality)</button>
+            <button class="modelFilterBtn" data-filter="cached">Cached</button>
+            <button class="modelFilterBtn" data-filter="recommended">Recommended</button>
+          </div>
+        </div>
+        <div id="modelSelectorContent" style="flex:1; overflow:auto; padding:16px;">
+          <div id="recommendedModels" style="margin-bottom:24px;"></div>
+          <div id="allModelsGrid" class="downloadsGrid"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Credits Modal -->
   <div id="creditsModal" class="creditsModal">
     <div class="creditsPanel">
@@ -249,8 +368,17 @@
     const sendBtn = $('#send');
     const tempEl = $('#temp');
     const clearBtn = $('#clear');
-    const modelSel = $('#modelSel');
+    const modelSel = $('#modelSel'); // Keep for compatibility
     const loadBtn = $('#loadModel');
+    const modelSelectorBtn = $('#modelSelectorBtn');
+    const modelSelectorModal = $('#modelSelectorModal');
+    const closeModelSelector = $('#closeModelSelector');
+    const modelSearch = $('#modelSearch');
+    const currentModelName = $('#currentModelName');
+    const allModelsGrid = $('#allModelsGrid');
+    const recommendedModels = $('#recommendedModels');
+    let currentSelectedModel = null;
+    let allModelsList = [];
     const statusEl = $('#engineStatus');
     const gpuWarn = $('#gpuWarn');
     const progressWrap = $('#progressWrap');
@@ -265,6 +393,8 @@
     const downloadsBody = $('#downloadsBody');
     const logsBody = $('#logsBody');
     const downloadsList = $('#downloadsList');
+    const availableModelsGrid = $('#availableModelsGrid');
+    const downloadedModelsGrid = $('#downloadedModelsGrid');
     const refreshDownloads = $('#refreshDownloads');
     const clearAllCaches = $('#clearAllCaches');
     const clearDownloadsTrack = $('#clearDownloadsTrack');
@@ -312,6 +442,10 @@
     let buddyMemory = null;
     let engine = null;
     let lastChosenModel = localStorage.getItem(LS_MODEL) || '';
+    let activeRequestTimeout = null;
+    let requestStartTime = null;
+    const REQUEST_TIMEOUT_MS = 120000; // 2 minutes timeout
+    const STUCK_REQUEST_MS = 30000; // 30 seconds to detect stuck requests
 
     // Logging
     const logs = [];
@@ -323,7 +457,7 @@
       if (logModal.style.display !== 'none') renderLogs();
     }
     function renderLogs(){ logBody.textContent = logs.join('\n'); logBody.scrollTop = logBody.scrollHeight; }
-    function toggleLogs(force) { const show = force ?? (logModal.style.display === 'none'); logModal.style.display = show ? 'grid' : 'none'; if (show) { setActiveTab(activeTab); renderLogs(); renderDownloads(); } }
+    function toggleLogs(force) { const show = force ?? (logModal.style.display === 'none'); logModal.style.display = show ? 'grid' : 'none'; if (show) { setActiveTab(activeTab); renderLogs(); renderAvailableModels(); renderDownloads(); } }
     let activeTab = 'downloads';
     function setActiveTab(name){ activeTab = name; if(name==='downloads'){ tabDownloads.classList.add('active'); tabLogs.classList.remove('active'); downloadsBody.style.display='block'; logsBody.style.display='none'; } else { tabLogs.classList.add('active'); tabDownloads.classList.remove('active'); downloadsBody.style.display='none'; logsBody.style.display='block'; } }
 
@@ -381,6 +515,21 @@
         const base = 'You are a concise, helpful AI assistant. You may emit internal tool instructions like [tool:settings]{"theme":"light"} or [tool:preview]{"language":"html","code":"..."}, but these must NEVER be shown directly to the user. Silently parse and act on them, then remove any [tool:*]{...} blocks from the visible reply.';
         let addon = '';
         if (mode === 'genius') addon = ' Explain deeply, step-by-step, and cover edge cases.';
+        else if (mode === 'teacher') addon = ' Act as an educational instructor. Break down complex topics into simple, understandable parts. Use examples and analogies to help the user learn.';
+        else if (mode === 'creative') addon = ' Be imaginative and artistic. Think outside the box, suggest creative solutions, and inspire with original ideas.';
+        else if (mode === 'analyst') addon = ' Focus on data, facts, and logical analysis. Present information systematically with clear reasoning and evidence-based conclusions.';
+        else if (mode === 'storyteller') addon = ' Craft engaging narratives. Use vivid descriptions, build context, and make responses compelling and story-like when appropriate.';
+        else if (mode === 'coach') addon = ' Be motivational and goal-oriented. Encourage the user, help them set objectives, and provide actionable steps toward success.';
+        else if (mode === 'scientist') addon = ' Approach topics methodically and scientifically. Use precise terminology, cite methodologies, and maintain objectivity.';
+        else if (mode === 'poet') addon = ' Use lyrical and expressive language. Employ metaphors, rhythm, and beautiful phrasing to convey ideas artistically.';
+        else if (mode === 'critic') addon = ' Provide detailed evaluations and constructive feedback. Analyze strengths and weaknesses with thoughtful, balanced perspectives.';
+        else if (mode === 'mentor') addon = ' Offer guidance and wisdom. Share insights from experience, help navigate challenges, and support long-term growth.';
+        else if (mode === 'explorer') addon = ' Be curious and adventurous. Ask probing questions, explore different angles, and discover new possibilities together.';
+        else if (mode === 'optimist') addon = ' Maintain a positive, encouraging tone. Focus on opportunities, solutions, and the bright side of situations.';
+        else if (mode === 'realist') addon = ' Be practical and straightforward. Give honest, no-nonsense advice grounded in reality, without sugarcoating.';
+        else if (mode === 'philosopher') addon = ' Engage in deep thinking and abstract concepts. Explore fundamental questions, ethics, and the nature of things.';
+        else if (mode === 'translator') addon = ' Focus on language and communication. Help bridge understanding across languages, cultures, and contexts.';
+        else if (mode === 'summarizer') addon = ' Be concise and to-the-point. Extract key information, eliminate fluff, and deliver clear summaries.';
         else if (mode === 'rewriter') addon = ' Rewrite user text to be logically correct, spell-checked, and grammatically sound while preserving intent.';
         else if (mode === 'programmer') addon = ' Generate clean, minimal HTML/CSS/JS. Use a single code block with fences.';
         else if (mode === 'buddy') addon = ' Act as a warm, supportive friend. Use short, caring messages and remember helpful details.';
@@ -480,9 +629,239 @@
     // --- WebLLM Engine ---
     function showProgress(show){ if (progressWrap) progressWrap.style.display = show ? 'flex' : 'none'; }
     function setProgress(pct, text){ if(progressBar){ progressBar.style.width = Math.max(0, Math.min(100, pct)) + '%'; } if(progressText){ progressText.textContent = Math.round(Math.max(0, Math.min(100, pct))) + '%'; } if (text && statusEl) statusEl.textContent = 'Engine: ' + text; }
+    function getModelRecommendations(list) {
+      const downloaded = getDownloadedSet();
+      const recommendations = [];
+      
+      // Recommend small cached models first
+      const smallCached = list.filter(m => {
+        const id = (m.model_id || '').toLowerCase();
+        return downloaded.has(m.model_id) && /0\.5b|1\.5b|1b|tiny|mini|small/i.test(id);
+      });
+      if (smallCached.length > 0) {
+        recommendations.push(...smallCached.slice(0, 2));
+      }
+      
+      // Recommend small uncached models
+      const smallUncached = list.filter(m => {
+        const id = (m.model_id || '').toLowerCase();
+        return !downloaded.has(m.model_id) && /0\.5b|1\.5b|1b|tiny|mini|small/i.test(id);
+      });
+      if (smallUncached.length > 0 && recommendations.length < 3) {
+        recommendations.push(...smallUncached.slice(0, 3 - recommendations.length));
+      }
+      
+      return recommendations.slice(0, 3);
+    }
+    
+    function createSmartModelCard(modelId, isRecommended = false) {
+      const card = document.createElement('div');
+      const sizeInfo = getModelSize(modelId);
+      const downloaded = getDownloadedSet().has(modelId);
+      const isSelected = currentSelectedModel === modelId;
+      
+      card.className = `modelCard ${isRecommended ? 'recommended' : ''} ${isSelected ? 'selected' : ''}`;
+      
+      const header = document.createElement('div');
+      header.className = 'modelCardHeader';
+      
+      const name = document.createElement('div');
+      name.className = 'modelCardName';
+      name.textContent = modelId;
+      name.title = modelId;
+      
+      header.appendChild(name);
+      
+      const meta = document.createElement('div');
+      meta.className = 'modelCardMeta';
+      
+      if (downloaded) {
+        const cachedBadge = document.createElement('span');
+        cachedBadge.className = 'modelBadge cached';
+        cachedBadge.textContent = '✓ Cached';
+        meta.appendChild(cachedBadge);
+      }
+      
+      const sizeBadge = document.createElement('span');
+      sizeBadge.className = `modelBadge ${sizeInfo.class}`;
+      sizeBadge.textContent = sizeInfo.size;
+      meta.appendChild(sizeBadge);
+      
+      const info = document.createElement('div');
+      info.className = 'modelCardInfo';
+      
+      // Speed indicator
+      const speedRow = document.createElement('div');
+      speedRow.className = 'modelCardInfoRow';
+      speedRow.innerHTML = `<span class="modelCardInfoIcon">⚡</span><span>${sizeInfo.class === 'small' ? 'Very Fast' : sizeInfo.class === 'medium' ? 'Fast' : 'Slower'}</span>`;
+      info.appendChild(speedRow);
+      
+      // Quality indicator
+      const qualityRow = document.createElement('div');
+      qualityRow.className = 'modelCardInfoRow';
+      qualityRow.innerHTML = `<span class="modelCardInfoIcon">🎯</span><span>${sizeInfo.class === 'small' ? 'Good' : sizeInfo.class === 'medium' ? 'Better' : 'Best'}</span>`;
+      info.appendChild(qualityRow);
+      
+      // Memory indicator
+      const memoryRow = document.createElement('div');
+      memoryRow.className = 'modelCardInfoRow';
+      const memText = sizeInfo.class === 'small' ? '<2GB' : sizeInfo.class === 'medium' ? '2-4GB' : '4GB+';
+      memoryRow.innerHTML = `<span class="modelCardInfoIcon">💾</span><span>${memText}</span>`;
+      info.appendChild(memoryRow);
+      
+      const actions = document.createElement('div');
+      actions.className = 'modelCardActions';
+      
+      const loadBtn = document.createElement('button');
+      loadBtn.className = 'modelCardBtn primary';
+      loadBtn.textContent = downloaded ? 'Load' : 'Download & Load';
+      loadBtn.onclick = (e) => {
+        e.stopPropagation();
+        currentSelectedModel = modelId;
+        if (modelSel) modelSel.value = modelId;
+        if (currentModelName) {
+          const shortName = modelId.length > 25 ? modelId.substring(0, 22) + '...' : modelId;
+          currentModelName.textContent = shortName;
+          currentModelName.title = modelId;
+        }
+        renderModelSelector();
+        loadSelectedModel();
+        if (modelSelectorModal) modelSelectorModal.style.display = 'none';
+      };
+      
+      const selectBtn = document.createElement('button');
+      selectBtn.className = 'modelCardBtn secondary';
+      selectBtn.textContent = isSelected ? 'Selected' : 'Select';
+      selectBtn.onclick = (e) => {
+        e.stopPropagation();
+        currentSelectedModel = modelId;
+        if (modelSel) modelSel.value = modelId;
+        if (currentModelName) {
+          const shortName = modelId.length > 25 ? modelId.substring(0, 22) + '...' : modelId;
+          currentModelName.textContent = shortName;
+          currentModelName.title = modelId;
+        }
+        renderModelSelector();
+      };
+      
+      actions.appendChild(loadBtn);
+      actions.appendChild(selectBtn);
+      
+      card.onclick = () => {
+        currentSelectedModel = modelId;
+        if (modelSel) modelSel.value = modelId;
+        if (currentModelName) {
+          const shortName = modelId.length > 25 ? modelId.substring(0, 22) + '...' : modelId;
+          currentModelName.textContent = shortName;
+          currentModelName.title = modelId;
+        }
+        renderModelSelector();
+      };
+      
+      card.appendChild(header);
+      card.appendChild(meta);
+      card.appendChild(info);
+      card.appendChild(actions);
+      
+      return card;
+    }
+    
+    function renderModelSelector() {
+      if (!allModelsGrid) return;
+      
+      try {
+        const list = allModelsList.length > 0 ? allModelsList : (webllm?.prebuiltAppConfig?.model_list) || [];
+        if (list.length === 0) {
+          allModelsGrid.innerHTML = '<div class="emptyState"><div class="emptyStateIcon">📦</div><div>Loading models...</div></div>';
+          return;
+        }
+        
+        const searchTerm = (modelSearch?.value || '').toLowerCase();
+        const activeFilter = document.querySelector('.modelFilterBtn.active')?.dataset?.filter || 'all';
+        const downloaded = getDownloadedSet();
+        
+        // Filter models
+        let filtered = list.filter(m => {
+          const id = (m.model_id || '').toLowerCase();
+          if (searchTerm && !id.includes(searchTerm)) return false;
+          
+          if (activeFilter === 'cached') return downloaded.has(m.model_id);
+          if (activeFilter === 'recommended') {
+            const recs = getModelRecommendations(list);
+            return recs.some(r => r.model_id === m.model_id);
+          }
+          if (activeFilter === 'small') {
+            return /0\.5b|1\.5b|1b|tiny|mini|small/i.test(id);
+          }
+          if (activeFilter === 'medium') {
+            return /2b|3b/i.test(id);
+          }
+          if (activeFilter === 'large') {
+            return /7b|8b|13b|14b/i.test(id);
+          }
+          return true;
+        });
+        
+        // Sort: recommended first, then cached, then by size
+        filtered.sort((a, b) => {
+          const recs = getModelRecommendations(list);
+          const aRec = recs.some(r => r.model_id === a.model_id);
+          const bRec = recs.some(r => r.model_id === b.model_id);
+          if (aRec && !bRec) return -1;
+          if (!aRec && bRec) return 1;
+          
+          const aCached = downloaded.has(a.model_id);
+          const bCached = downloaded.has(b.model_id);
+          if (aCached && !bCached) return -1;
+          if (!aCached && bCached) return 1;
+          
+          const aSize = getModelSize(a.model_id);
+          const bSize = getModelSize(b.model_id);
+          const sizeOrder = { small: 0, medium: 1, large: 2 };
+          return (sizeOrder[aSize.class] || 1) - (sizeOrder[bSize.class] || 1);
+        });
+        
+        allModelsGrid.innerHTML = '';
+        
+        if (filtered.length === 0) {
+          allModelsGrid.innerHTML = '<div class="emptyState"><div class="emptyStateIcon">🔍</div><div>No models found</div></div>';
+          return;
+        }
+        
+        filtered.forEach(rec => {
+          const recs = getModelRecommendations(list);
+          const isRecommended = recs.some(r => r.model_id === rec.model_id);
+          const card = createSmartModelCard(rec.model_id, isRecommended);
+          allModelsGrid.appendChild(card);
+        });
+        
+        // Render recommended section if showing all
+        if (activeFilter === 'all' || activeFilter === 'recommended') {
+          const recs = getModelRecommendations(list);
+          if (recs.length > 0 && !searchTerm) {
+            recommendedModels.innerHTML = '<div class="recommendedSection"><div class="recommendedSectionTitle">Recommended for You</div><div class="downloadsGrid" id="recommendedGrid"></div></div>';
+            const recGrid = $('#recommendedGrid');
+            if (recGrid) {
+              recs.forEach(r => {
+                const card = createSmartModelCard(r.model_id, true);
+                recGrid.appendChild(card);
+              });
+            }
+          } else {
+            recommendedModels.innerHTML = '';
+          }
+        } else {
+          recommendedModels.innerHTML = '';
+        }
+      } catch(e) {
+        log('renderModelSelector error: ' + (e?.message||e));
+      }
+    }
+    
     async function populateModels() {
       try {
         const list = (webllm?.prebuiltAppConfig?.model_list) || [];
+        allModelsList = list;
         modelSel.innerHTML = '';
         const isSimple = (simpleToggle ? simpleToggle.checked : (localStorage.getItem(LS_SIMPLE) === '1'));
         // In Simple mode, show only tiny/small models to reduce noise
@@ -502,7 +881,16 @@
         }
         let def = [...modelSel.options].find(o=>/qwen.*0\.5b/i.test(o.value))?.value || modelSel.options[0]?.value;
         if (lastChosenModel && [...modelSel.options].some(o=>o.value===lastChosenModel)) def = lastChosenModel;
-        if (def) modelSel.value = def;
+        if (def) {
+          modelSel.value = def;
+          currentSelectedModel = def;
+          if (currentModelName) {
+            const shortName = def.length > 25 ? def.substring(0, 22) + '...' : def;
+            currentModelName.textContent = shortName;
+            currentModelName.title = def;
+          }
+        }
+        renderModelSelector();
         log(`Models loaded (${filtered.length} shown of ${list.length} total). Default: ${modelSel.value}`);
       } catch(e){ log('Populate models failed: ' + (e?.message||e)); }
     }
@@ -538,9 +926,17 @@
         showProgress(false);
         localStorage.setItem(LS_MODEL, id);
         lastChosenModel = id;
+        currentSelectedModel = id;
+        if (currentModelName) {
+          const shortName = id.length > 25 ? id.substring(0, 22) + '...' : id;
+          currentModelName.textContent = shortName;
+          currentModelName.title = id;
+        }
         markDownloaded(id);
+        renderAvailableModels();
         renderDownloads();
         updateModelBadges();
+        renderModelSelector();
         log('Model ready: ' + id);
       } catch(e){
         // Avoid noisy stack traces in console; provide friendly fallback
@@ -553,12 +949,33 @@
       saveChat();
     }
     async function ensureEngine(){
-      if (!('gpu' in navigator)) return null;
+      // Better Chrome WebGPU detection
+      if (!('gpu' in navigator)) {
+        // Try to request adapter for better detection
+        try {
+          const adapter = await navigator.gpu?.requestAdapter();
+          if (!adapter) {
+            log('WebGPU adapter not available');
+            return null;
+          }
+        } catch(e) {
+          log('WebGPU check failed: ' + (e?.message||e));
+          return null;
+        }
+      }
       if (engine) return engine;
-      await loadSelectedModel();
+      try {
+        await Promise.race([
+          loadSelectedModel(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Model load timeout')), 60000))
+        ]);
+      } catch(e) {
+        log('Engine initialization failed: ' + (e?.message||e));
+        return null;
+      }
       return engine;
     }
-    async function replyLLM(userText){
+    async function replyLLM(userText, retryCount = 0){
       const t = ((tempEl && !Number.isNaN(tempEl.valueAsNumber)) ? tempEl.valueAsNumber : (parseFloat(tempEl ? tempEl.value : '1') || 1));
       const node = add('bot', '');
       // reset token stats
@@ -566,17 +983,55 @@
       if (tpsAvgEl) tpsAvgEl.textContent = '0';
       let emitted = 0; const t0 = performance.now();
       stopRequested = false;
+      requestStartTime = Date.now();
+      
+      // Clear any existing timeout
+      if (activeRequestTimeout) {
+        clearTimeout(activeRequestTimeout);
+        activeRequestTimeout = null;
+      }
+      
+      // Set timeout to detect stuck requests
+      activeRequestTimeout = setTimeout(() => {
+        if (node.textContent.trim() === '') {
+          log('Request appears stuck, attempting recovery...');
+          node.textContent = 'Response is taking longer than expected. Trying fallback...';
+          stopRequested = true;
+          // Force fallback after timeout
+          setTimeout(() => {
+            if (node.textContent.includes('trying fallback')) {
+              const resp = quickIntent(userText) || markovGen(fallbackModel, userText, 100, t);
+              node.textContent = resp;
+              history.push({ role:'assistant', content: resp });
+              saveChat();
+              busy = false;
+            }
+          }, 2000);
+        }
+      }, STUCK_REQUEST_MS);
+      
       try{
-        const eng = await ensureEngine();
+        // Check connection status
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+          throw new Error('Offline - using local fallback');
+        }
+        
+        const eng = await Promise.race([
+          ensureEngine(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Engine initialization timeout')), 15000))
+        ]);
+        
         if (!eng){
           log('Using fallback responder');
           const quick = quickIntent(userText);
-          const resp = quick || markovGen(fallbackModel, userText, 80, t);
+          const resp = quick || markovGen(fallbackModel, userText, 100, t);
           await typeStream(node, resp);
           history.push({ role:'assistant', content: node.textContent });
           saveChat();
+          if (activeRequestTimeout) { clearTimeout(activeRequestTimeout); activeRequestTimeout = null; }
           return;
         }
+        
         log('Starting streaming response');
         // Ensure chat history is valid for the model API
         function sanitizeHistoryForLLM(hist, userText){
@@ -594,48 +1049,159 @@
           if (!arr.length || !['user','tool'].includes(arr[arr.length-1].role)){
             arr.push({ role:'user', content: String(userText||'') || 'Hello' });
           }
+          // Limit history length for performance (keep last 20 messages)
+          if (arr.length > 22) {
+            arr.splice(1, arr.length - 22);
+          }
           return arr;
         }catch{ return [{ role:'system', content:'You are a concise, helpful AI assistant.' }, { role:'user', content: String(userText||'')||'Hello' }]; }
         }
         const safeMessages = sanitizeHistoryForLLM(history, userText);
-        const chunks = await eng.chat.completions.create({ messages: safeMessages, temperature: t, stream: true, stream_options: { include_usage: true } });
+        
+        // Create streaming request with timeout
+        const streamPromise = eng.chat.completions.create({ 
+          messages: safeMessages, 
+          temperature: t, 
+          stream: true, 
+          stream_options: { include_usage: true } 
+        });
+        
+        const chunks = await Promise.race([
+          streamPromise,
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Stream timeout')), REQUEST_TIMEOUT_MS))
+        ]);
+        
         let acc = '';
-        for await (const ch of chunks){
-          if (stopRequested) { log('Streaming stopped'); break; }
-          const delta = ch?.choices?.[0]?.delta?.content || '';
-          if (delta){ acc += delta; node.textContent = acc; msgs.scrollTop = msgs.scrollHeight; }
-          const used = ch?.usage?.completion_tokens;
-          if (typeof used === 'number') emitted = used; else if (delta) emitted += Math.max(1, Math.round(delta.length/4));
-          const dt = Math.max(1, (performance.now()-t0)/1000);
-          if (tokCountEl) tokCountEl.textContent = String(emitted);
-          if (tpsAvgEl) tpsAvgEl.textContent = (emitted/dt).toFixed(1);
+        let lastUpdateTime = Date.now();
+        let hasReceivedData = false;
+        
+        try {
+          for await (const ch of chunks){
+            if (stopRequested) { log('Streaming stopped'); break; }
+            
+            lastUpdateTime = Date.now();
+            const delta = ch?.choices?.[0]?.delta?.content || '';
+            if (delta){ 
+              hasReceivedData = true;
+              acc += delta; 
+              node.textContent = acc; 
+              msgs.scrollTop = msgs.scrollHeight; 
+            }
+            const used = ch?.usage?.completion_tokens;
+            if (typeof used === 'number') emitted = used; 
+            else if (delta) emitted += Math.max(1, Math.round(delta.length/4));
+            const dt = Math.max(1, (performance.now()-t0)/1000);
+            if (tokCountEl) tokCountEl.textContent = String(emitted);
+            if (tpsAvgEl) tpsAvgEl.textContent = (emitted/dt).toFixed(1);
+            
+            // Check for stuck stream (no data for 10 seconds)
+            if (hasReceivedData && (Date.now() - lastUpdateTime) > 10000) {
+              log('Stream appears stuck, breaking');
+              break;
+            }
+          }
+        } catch(streamError) {
+          log('Stream iteration error: ' + (streamError?.message||streamError));
+          if (!hasReceivedData && retryCount < 2) {
+            log(`Retrying request (attempt ${retryCount + 1})...`);
+            if (activeRequestTimeout) { clearTimeout(activeRequestTimeout); activeRequestTimeout = null; }
+            return replyLLM(userText, retryCount + 1);
+          }
+          throw streamError;
         }
-        applyToolBlocks(node.textContent);
-        const pv = codePreviewFromBlocks(node.textContent); if (pv) addBotRich('Preview:', pv);
-        history.push({ role:'assistant', content: node.textContent });
-        saveChat();
+        
+        // If we got some content, use it; otherwise fallback
+        if (acc.trim()) {
+          applyToolBlocks(node.textContent);
+          const pv = codePreviewFromBlocks(node.textContent); 
+          if (pv) addBotRich('Preview:', pv);
+          history.push({ role:'assistant', content: node.textContent });
+          saveChat();
+        } else if (!hasReceivedData && retryCount < 2) {
+          log(`No data received, retrying (attempt ${retryCount + 1})...`);
+          if (activeRequestTimeout) { clearTimeout(activeRequestTimeout); activeRequestTimeout = null; }
+          return replyLLM(userText, retryCount + 1);
+        } else {
+          throw new Error('No response received from model');
+        }
+        
+        if (activeRequestTimeout) { clearTimeout(activeRequestTimeout); activeRequestTimeout = null; }
       } catch(e){
         console.error(e);
-        node.textContent = 'There was an error generating a response. Falling back locally.';
-        log('Error during generation, falling back: ' + (e?.message||e));
-        const resp = markovGen(fallbackModel, userText, 80, t);
-        await typeStream(node, resp);
-        history.push({ role:'assistant', content: node.textContent });
-        saveChat();
+        if (activeRequestTimeout) { clearTimeout(activeRequestTimeout); activeRequestTimeout = null; }
+        
+        // Retry logic for certain errors
+        if (retryCount < 2 && (
+          e?.message?.includes('timeout') || 
+          e?.message?.includes('network') ||
+          e?.message?.includes('failed') ||
+          !e?.message
+        )) {
+          log(`Retrying after error (attempt ${retryCount + 1}): ${e?.message||e}`);
+          await new Promise(r => setTimeout(r, 1000 * (retryCount + 1))); // Exponential backoff
+          return replyLLM(userText, retryCount + 1);
+        }
+        
+        // Final fallback
+        const errorMsg = e?.message || String(e);
+        if (!node.textContent || node.textContent.includes('trying fallback') || node.textContent.trim() === '') {
+          node.textContent = 'There was an error generating a response. Using local fallback.';
+          log('Error during generation, falling back: ' + errorMsg);
+          const resp = quickIntent(userText) || markovGen(fallbackModel, userText, 100, t);
+          await typeStream(node, resp);
+          history.push({ role:'assistant', content: node.textContent });
+          saveChat();
+        }
+      } finally {
+        requestStartTime = null;
+        if (activeRequestTimeout) { clearTimeout(activeRequestTimeout); activeRequestTimeout = null; }
       }
     }
-    async function typeStream(node, text){ node.textContent = ''; for (const ch of text){ node.textContent += ch; await new Promise(r=>setTimeout(r, 6 + Math.random()*8)); msgs.scrollTop = msgs.scrollHeight; } }
+    async function typeStream(node, text){ 
+      node.textContent = ''; 
+      // Faster typing for fallback responses
+      const delay = 3 + Math.random() * 4; // Reduced from 6-14ms to 3-7ms
+      for (const ch of text){ 
+        node.textContent += ch; 
+        await new Promise(r=>setTimeout(r, delay)); 
+        msgs.scrollTop = msgs.scrollHeight; 
+      } 
+    }
     function onSend(){
-      if (busy) return;
+      if (busy) {
+        // If stuck for too long, force reset
+        if (requestStartTime && (Date.now() - requestStartTime) > 60000) {
+          log('Forcing reset of stuck request');
+          busy = false;
+          stopRequested = true;
+          if (activeRequestTimeout) {
+            clearTimeout(activeRequestTimeout);
+            activeRequestTimeout = null;
+          }
+          requestStartTime = null;
+        } else {
+          return;
+        }
+      }
       const v = (input.value||'').trim();
       if (!v) return;
       busy = true;
+      stopRequested = false;
       add('user', v);
       history.push({ role:'user', content: v });
       log('User: ' + (v.length>120 ? v.slice(0,120)+'…' : v));
       input.value = '';
       updateSystemPrompt();
-      replyLLM(v).finally(()=>{ busy=false; saveChat(); processQueue(); });
+      replyLLM(v).finally(()=>{ 
+        busy=false; 
+        saveChat(); 
+        processQueue(); 
+        requestStartTime = null;
+        if (activeRequestTimeout) {
+          clearTimeout(activeRequestTimeout);
+          activeRequestTimeout = null;
+        }
+      });
     }
 
     // Settings persistence (theme, accent, language)
@@ -681,8 +1247,160 @@
      function getDownloadedSet(){ try{ const arr=JSON.parse(localStorage.getItem(LS_DOWNLOADED)||'[]'); return new Set(arr); }catch{ return new Set(); } }
      function setDownloadedSet(s){ localStorage.setItem(LS_DOWNLOADED, JSON.stringify([...s])); }
      function markDownloaded(id){ const s=getDownloadedSet(); s.add(id); setDownloadedSet(s); }
-     function renderDownloads(){ if(!downloadsList) return; const s=getDownloadedSet(); downloadsList.innerHTML=''; if(!s.size){ const d=document.createElement('div'); d.style.padding='12px'; d.textContent='No downloaded models tracked yet.'; downloadsList.appendChild(d); return; } [...s].forEach(id=>{ const row=document.createElement('div'); row.className='downloadItem'; const left=document.createElement('div'); left.textContent=id; const del=document.createElement('button'); del.className='delBtn'; del.textContent='Delete'; del.onclick=()=> deleteDownloadedModel(id); row.append(left, del); downloadsList.appendChild(row); }); }
-     async function deleteDownloadedModel(id){ try{ const s=getDownloadedSet(); s.delete(id); setDownloadedSet(s); renderDownloads(); log('Deleted tracked model: '+id+' (cache removal best-effort)'); }catch(e){ log('Delete error: '+(e?.message||e)); } }
+     function getModelSize(modelId) {
+       const id = (modelId || '').toLowerCase();
+       if (/0\.5b|tiny|mini/i.test(id)) return { label: 'Tiny', class: 'small', size: '0.5B' };
+       if (/1\.5b|1b|small/i.test(id)) return { label: 'Small', class: 'small', size: '1-1.5B' };
+       if (/3b|2b/i.test(id)) return { label: 'Medium', class: 'medium', size: '2-3B' };
+       if (/7b|8b/i.test(id)) return { label: 'Large', class: 'large', size: '7-8B' };
+       if (/13b|14b/i.test(id)) return { label: 'XL', class: 'large', size: '13-14B' };
+       return { label: 'Unknown', class: 'medium', size: '?' };
+     }
+     
+     function createModelCard(modelId, isDownloaded = false) {
+       const card = document.createElement('div');
+       card.className = 'downloadItem';
+       const sizeInfo = getModelSize(modelId);
+       const cached = isDownloaded;
+       
+       const header = document.createElement('div');
+       header.className = 'downloadItemHeader';
+       
+       const nameDiv = document.createElement('div');
+       nameDiv.className = 'downloadItemName';
+       nameDiv.textContent = modelId;
+       nameDiv.title = modelId;
+       
+       const metaDiv = document.createElement('div');
+       metaDiv.className = 'downloadItemMeta';
+       
+       const sizeBadge = document.createElement('span');
+       sizeBadge.className = `modelBadge ${sizeInfo.class}`;
+       sizeBadge.textContent = sizeInfo.size;
+       
+       if (cached) {
+         const cachedBadge = document.createElement('span');
+         cachedBadge.className = 'modelBadge cached';
+         cachedBadge.textContent = '✓ Cached';
+         metaDiv.appendChild(cachedBadge);
+       }
+       
+       metaDiv.appendChild(sizeBadge);
+       
+       header.appendChild(nameDiv);
+       
+       const actions = document.createElement('div');
+       actions.className = 'downloadItemActions';
+       
+       if (isDownloaded) {
+         const loadBtn = document.createElement('button');
+         loadBtn.className = 'downloadItemBtn primary';
+         loadBtn.textContent = 'Load';
+         loadBtn.onclick = () => {
+           if (modelSel) modelSel.value = modelId;
+           loadSelectedModel();
+           toggleLogs(false);
+         };
+         actions.appendChild(loadBtn);
+         
+         const delBtn = document.createElement('button');
+         delBtn.className = 'downloadItemBtn danger';
+         delBtn.textContent = 'Delete';
+         delBtn.onclick = () => deleteDownloadedModel(modelId);
+         actions.appendChild(delBtn);
+       } else {
+         const downloadBtn = document.createElement('button');
+         downloadBtn.className = 'downloadItemBtn primary';
+         downloadBtn.textContent = 'Download';
+         downloadBtn.onclick = () => {
+           if (modelSel) modelSel.value = modelId;
+           loadSelectedModel();
+           toggleLogs(false);
+         };
+         actions.appendChild(downloadBtn);
+       }
+       
+       card.appendChild(header);
+       card.appendChild(metaDiv);
+       card.appendChild(actions);
+       
+       return card;
+     }
+     
+     function renderAvailableModels() {
+       if (!availableModelsGrid) return;
+       try {
+         const list = (webllm?.prebuiltAppConfig?.model_list) || [];
+         availableModelsGrid.innerHTML = '';
+         
+         // Filter and prioritize small models
+         const smallModels = list.filter(rec => {
+           const id = (rec?.model_id || '').toLowerCase();
+           return /0\.5b|1\.5b|1b|tiny|mini|small/i.test(id);
+         });
+         
+         const otherModels = list.filter(rec => {
+           const id = (rec?.model_id || '').toLowerCase();
+           return !/0\.5b|1\.5b|1b|tiny|mini|small/i.test(id);
+         });
+         
+         // Sort small models by size
+         const sortedSmall = [...smallModels].sort((a, b) => {
+           const aId = (a.model_id || '').toLowerCase();
+           const bId = (b.model_id || '').toLowerCase();
+           const aHas05 = /0\.5b|tiny/i.test(aId);
+           const bHas05 = /0\.5b|tiny/i.test(bId);
+           if (aHas05 && !bHas05) return -1;
+           if (!aHas05 && bHas05) return 1;
+           return aId.localeCompare(bId);
+         });
+         
+         // Show small models first, then others (limit to 30 total)
+         const allModels = [...sortedSmall, ...otherModels].slice(0, 30);
+         const downloadedSet = getDownloadedSet();
+         
+         allModels.forEach(rec => {
+           const modelId = rec?.model_id;
+           if (!modelId) return;
+           const isDownloaded = downloadedSet.has(modelId);
+           const card = createModelCard(modelId, isDownloaded);
+           availableModelsGrid.appendChild(card);
+         });
+         
+         if (allModels.length === 0) {
+           const empty = document.createElement('div');
+           empty.className = 'emptyState';
+           empty.innerHTML = '<div class="emptyStateIcon">📦</div><div>No models available</div>';
+           availableModelsGrid.appendChild(empty);
+         }
+       } catch(e) {
+         log('renderAvailableModels error: ' + (e?.message||e));
+       }
+     }
+     
+     function renderDownloads(){
+       if(!downloadedModelsGrid) return;
+       try {
+         const s = getDownloadedSet();
+         downloadedModelsGrid.innerHTML = '';
+         
+         if(!s.size){
+           const empty = document.createElement('div');
+           empty.className = 'emptyState';
+           empty.innerHTML = '<div class="emptyStateIcon">📥</div><div>No downloaded models yet.<br>Download a model from the list above.</div>';
+           downloadedModelsGrid.appendChild(empty);
+           return;
+         }
+         
+         [...s].sort().forEach(id => {
+           const card = createModelCard(id, true);
+           downloadedModelsGrid.appendChild(card);
+         });
+       } catch(e) {
+         log('renderDownloads error: ' + (e?.message||e));
+       }
+     }
+     async function deleteDownloadedModel(id){ try{ const s=getDownloadedSet(); s.delete(id); setDownloadedSet(s); renderAvailableModels(); renderDownloads(); log('Deleted tracked model: '+id+' (cache removal best-effort)'); }catch(e){ log('Delete error: '+(e?.message||e)); } }
      async function clearAllModelCachesFn(){ log('Attempting to clear WebLLM caches'); try{ if (indexedDB.databases){ const dbs=await indexedDB.databases(); for(const db of dbs){ const name=db.name||''; if(name && (name.startsWith('mlc') || name.toLowerCase().includes('webllm'))){ await new Promise(res=>{ const rq=indexedDB.deleteDatabase(name); rq.onsuccess=rq.onerror=rq.onblocked=()=>res(); }); log('Deleted IndexedDB: '+name); } } } else { log('indexedDB.databases() not supported'); } } catch(e){ log('Clear caches error: '+(e?.message||e)); } }
      
      // Export/Import model functions
@@ -852,6 +1570,7 @@
          }
          // Mark model as downloaded
          markDownloaded(modelId);
+         renderAvailableModels();
          renderDownloads();
          updateModelBadges();
          add('bot', `Model ${modelId} imported successfully! ${importedCount} database(s) restored.`);
@@ -998,9 +1717,9 @@
      // Tabs and manager actions
      if (tabDownloads) tabDownloads.onclick = ()=> setActiveTab('downloads');
      if (tabLogs) tabLogs.onclick = ()=> setActiveTab('logs');
-    if (refreshDownloads) refreshDownloads.onclick = ()=> { renderDownloads(); updateModelBadges(); };
+    if (refreshDownloads) refreshDownloads.onclick = ()=> { renderAvailableModels(); renderDownloads(); updateModelBadges(); };
      if (clearAllCaches) clearAllCaches.onclick = ()=> clearAllModelCachesFn();
-     if (clearDownloadsTrack) clearDownloadsTrack.onclick = ()=> { localStorage.removeItem(LS_DOWNLOADED); renderDownloads(); updateModelBadges(); };
+     if (clearDownloadsTrack) clearDownloadsTrack.onclick = ()=> { localStorage.removeItem(LS_DOWNLOADED); renderAvailableModels(); renderDownloads(); updateModelBadges(); };
      // Export/Import handlers
      const exportModelBtn = $('#exportModelBtn');
      const importModelBtn = $('#importModelBtn');
@@ -1056,6 +1775,40 @@
      sendBtn.onclick = onSend;
      clearBtn.onclick = () => { msgs.innerHTML=''; history = [ history[0] ]; saveChat(); input.focus(); log('Chat cleared'); };
      loadBtn.onclick = () => loadSelectedModel();
+     // Model selector handlers
+     if (modelSelectorBtn) {
+       modelSelectorBtn.onclick = () => {
+         if (modelSelectorModal) {
+           modelSelectorModal.style.display = 'grid';
+           renderModelSelector();
+           if (modelSearch) modelSearch.focus();
+         }
+       };
+     }
+     if (closeModelSelector) {
+       closeModelSelector.onclick = () => {
+         if (modelSelectorModal) modelSelectorModal.style.display = 'none';
+       };
+     }
+     if (modelSearch) {
+       modelSearch.addEventListener('input', () => renderModelSelector());
+     }
+     // Filter buttons
+     document.querySelectorAll('.modelFilterBtn').forEach(btn => {
+       btn.addEventListener('click', () => {
+         document.querySelectorAll('.modelFilterBtn').forEach(b => b.classList.remove('active'));
+         btn.classList.add('active');
+         renderModelSelector();
+       });
+     });
+     // Close modal on outside click
+     if (modelSelectorModal) {
+       modelSelectorModal.addEventListener('click', (e) => {
+         if (e.target === modelSelectorModal) {
+           modelSelectorModal.style.display = 'none';
+         }
+       });
+     }
      closeLogs.onclick = () => toggleLogs(false);
      clearLogs.onclick = () => { logs.length = 0; renderLogs(); log('Logs cleared'); };
      // Theme/accent and Credits handlers
@@ -1074,14 +1827,39 @@
      if (saveMem) saveMem.onclick = ()=>{ try{ if (memInput){ const obj = JSON.parse(memInput.value||'{}'); buddyMemory = obj; saveMemory(); log('Memory saved'); } }catch(e){ log('Save memory error: '+(e?.message||e)); } finally { if (memModal) memModal.style.display='none'; } };
      // Queue/Stop handlers
      if (queueBtn) queueBtn.onclick = ()=>{ const v=(input.value||'').trim(); if(!v) return; enqueue(v); input.value=''; };
-     if (stopBtn) stopBtn.onclick = ()=>{ stopRequested = true; log('Stop requested'); };
+     if (stopBtn) stopBtn.onclick = ()=>{ 
+       stopRequested = true; 
+       log('Stop requested'); 
+       if (activeRequestTimeout) {
+         clearTimeout(activeRequestTimeout);
+         activeRequestTimeout = null;
+       }
+       busy = false;
+       requestStartTime = null;
+     };
      // Memory-in-prompt toggle
      if (memInPromptEl) {
        try { memInPromptEl.checked = localStorage.getItem(LS_MEMORY_IN_PROMPT) === '1'; } catch {}
        memInPromptEl.addEventListener('change', ()=>{ localStorage.setItem(LS_MEMORY_IN_PROMPT, memInPromptEl.checked ? '1' : '0'); updateSystemPrompt(); });
      }
      // Simple mode UI toggle and temp warning
-     function applySimpleUI(){ try{ const simple = simpleToggle && simpleToggle.checked; const tempWrap = tempEl && tempEl.parentElement; if (tempWrap) tempWrap.style.display = simple ? 'none' : ''; if (memoryBtn) memoryBtn.style.display = simple ? 'none' : ''; if (systemBtn) systemBtn.style.display = simple ? 'none' : ''; }catch{} }
+     function applySimpleUI(){ 
+       try{ 
+         const simple = simpleToggle && simpleToggle.checked; 
+         const tempWrap = tempEl && tempEl.parentElement; 
+         if (tempWrap) tempWrap.style.display = simple ? 'none' : ''; 
+         if (memoryBtn) memoryBtn.style.display = simple ? 'none' : ''; 
+         if (systemBtn) systemBtn.style.display = simple ? 'none' : ''; 
+         const personalityLabel = $('#personalityLabel');
+         if (personalityLabel) personalityLabel.style.display = simple ? 'block' : 'none';
+         // In simple mode, make personality dropdown more prominent
+         const personalityWrap = $('#personalityWrap');
+         if (personalityWrap && simple) {
+           personalityWrap.style.marginLeft = 'auto';
+           personalityWrap.style.marginRight = '8px';
+         }
+       }catch{} 
+     }
      function checkTempWarn(){ try{ const v = (tempEl && !Number.isNaN(tempEl.valueAsNumber)) ? tempEl.valueAsNumber : (parseFloat(tempEl ? tempEl.value : '0')||0); let el = document.getElementById('tempWarn'); if (!el){ el = document.createElement('span'); el.id='tempWarn'; el.className='badge'; el.style.marginLeft='8px'; el.style.color='#ef4444'; el.style.display='none'; el.textContent='High temperature may reduce quality.'; const ctrls=document.querySelector('.ctrls'); if (ctrls){ const anchor=document.getElementById('tokStats'); ctrls.insertBefore(el, anchor || ctrls.lastChild); } } el.style.display = v > 1.25 ? 'inline-flex' : 'none'; }catch{} }
      if (simpleToggle) simpleToggle.addEventListener('change', ()=>{ try{ localStorage.setItem(LS_SIMPLE, simpleToggle.checked ? '1' : '0'); }catch{} applySimpleUI(); populateModels().then(()=>{ updateModelBadges(); }).catch(()=>{}); });
      if (tempEl) tempEl.addEventListener('input', checkTempWarn);
@@ -1093,16 +1871,49 @@
      try { const sp = localStorage.getItem(LS_SYSTEM); if (sp) history[0] = { role:'system', content: sp }; } catch {}
      // Apply simple mode from storage and adjust UI; initialize temp warning
      try { const sm = localStorage.getItem(LS_SIMPLE) === '1'; if (simpleToggle) simpleToggle.checked = sm; } catch {}
+     // Set genius as default personality if not already set
+     if (promptMode) {
+       const savedMode = localStorage.getItem('localai_personality_mode');
+       if (!savedMode || ![...promptMode.options].some(o => o.value === savedMode)) {
+         promptMode.value = 'genius';
+         localStorage.setItem('localai_personality_mode', 'genius');
+       } else {
+         promptMode.value = savedMode;
+       }
+       // Update system prompt when personality changes
+       promptMode.addEventListener('change', () => {
+         localStorage.setItem('localai_personality_mode', promptMode.value);
+         updateSystemPrompt();
+       });
+       // Update system prompt on initial load
+       updateSystemPrompt();
+     }
      applySimpleUI();
      checkTempWarn();
      if (!msgs.children.length) add('bot', 'Welcome! Load a small model for stronger replies, or just start chatting to auto-load. If WebGPU is unavailable, I will use a tiny local fallback.');
      adjustPad();
      if (!('gpu' in navigator)) { gpuWarn.style.display = 'block'; }
      populateModels().then(()=>{ updateModelBadges(); }).catch(()=>{});
+     renderAvailableModels();
      renderDownloads();
      buddyMemory = loadMemory();
      updateQueueLabel();
      adjustPad();
+     // Connection status monitoring for Chrome
+     if (typeof window !== 'undefined') {
+       window.addEventListener('online', () => {
+         log('Connection restored');
+         if (statusEl) statusEl.textContent = 'Engine: online';
+       });
+       window.addEventListener('offline', () => {
+         log('Connection lost');
+         if (statusEl) statusEl.textContent = 'Engine: offline';
+         if (busy && requestStartTime) {
+           // If we're in the middle of a request and go offline, fallback faster
+           stopRequested = true;
+         }
+       });
+     }
      // Panic key: press P and A simultaneously to black out the screen
      const pressedKeys = new Set();
      document.addEventListener('keydown', (e)=>{

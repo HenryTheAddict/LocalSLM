@@ -1023,12 +1023,20 @@
          e.stopPropagation();
          modelMenuDropdown.classList.toggle('show');
        };
-       // Close dropdown when clicking outside
-       document.addEventListener('click', (e) => {
-         if (modelMenuDropdown && !modelMenuDropdown.contains(e.target) && !modelMenuBtn.contains(e.target)) {
-           modelMenuDropdown.classList.remove('show');
-         }
-       });
+       // Close dropdown when clicking outside (only add once)
+       if (!document.modelMenuClickHandlerAdded) {
+         const clickOutsideHandler = (e) => {
+           const dropdown = $('#modelMenuDropdown');
+           const btn = $('#modelMenuBtn');
+           if (dropdown && dropdown.classList.contains('show')) {
+             if (!dropdown.contains(e.target) && !btn.contains(e.target)) {
+               dropdown.classList.remove('show');
+             }
+           }
+         };
+         document.addEventListener('click', clickOutsideHandler);
+         document.modelMenuClickHandlerAdded = true;
+       }
      }
      if (quickExportBtn) quickExportBtn.onclick = () => {
        if (modelMenuDropdown) modelMenuDropdown.classList.remove('show');

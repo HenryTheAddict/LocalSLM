@@ -132,6 +132,41 @@
     .modelMenuItem:hover { background:#1f2937 }
     body.light .modelMenuItem { border-bottom-color:#e5e7eb }
     body.light .modelMenuItem:hover { background:#f3f4f6 }
+    /* Model Selector */
+    .modelFilterBtn { background:#1b1f2b; color:var(--fg); border:1px solid #2a2d3a; padding:6px 12px; border-radius:8px; font-size:12px; cursor:pointer; transition:all 0.2s }
+    .modelFilterBtn:hover { background:#2a2d3a; border-color:var(--accent) }
+    .modelFilterBtn.active { background:var(--accent); border-color:var(--accent); color:#fff }
+    body.light .modelFilterBtn { background:#e5e7eb; border-color:#e5e7eb; color:#111827 }
+    body.light .modelFilterBtn:hover { background:#d1d5db }
+    body.light .modelFilterBtn.active { background:var(--accent); border-color:var(--accent); color:#fff }
+    .modelCard { background:#1b1f2b; border:2px solid #2a2d3a; border-radius:12px; padding:16px; display:flex; flex-direction:column; gap:10px; transition:all 0.2s; cursor:pointer; position:relative }
+    .modelCard:hover { border-color:var(--accent); transform:translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,0.3) }
+    .modelCard.selected { border-color:var(--accent); background:#1f2330; box-shadow:0 0 0 2px rgba(124,58,237,0.2) }
+    .modelCard.recommended::before { content:'⭐ Recommended'; position:absolute; top:8px; right:8px; background:var(--accent); color:#fff; padding:4px 8px; border-radius:6px; font-size:10px; font-weight:600 }
+    .modelCardHeader { display:flex; align-items:flex-start; justify-content:space-between; gap:8px }
+    .modelCardName { font-weight:600; font-size:15px; color:var(--fg); flex:1; line-height:1.3 }
+    .modelCardMeta { display:flex; flex-wrap:wrap; gap:6px; margin-top:4px }
+    .modelCardInfo { display:flex; flex-direction:column; gap:6px; margin-top:8px; font-size:12px; color:var(--mut) }
+    .modelCardInfoRow { display:flex; align-items:center; gap:8px }
+    .modelCardInfoIcon { width:16px; text-align:center }
+    .modelCardActions { display:flex; gap:8px; margin-top:8px }
+    .modelCardBtn { flex:1; padding:8px 12px; border-radius:8px; border:none; font-weight:600; font-size:13px; cursor:pointer; transition:all 0.2s }
+    .modelCardBtn.primary { background:var(--accent); color:#fff }
+    .modelCardBtn.primary:hover { opacity:0.9; transform:scale(1.02) }
+    .modelCardBtn.secondary { background:transparent; border:1px solid #2a2d3a; color:var(--fg) }
+    .modelCardBtn.secondary:hover { background:#2a2d3a; border-color:var(--accent) }
+    body.light .modelCard { background:#f3f4f6; border-color:#e5e7eb }
+    body.light .modelCard:hover { background:#ffffff; border-color:var(--accent) }
+    body.light .modelCard.selected { background:#ffffff; border-color:var(--accent) }
+    body.light .modelCardBtn.secondary { border-color:#e5e7eb; color:#111827 }
+    body.light .modelCardBtn.secondary:hover { background:#e5e7eb }
+    #modelSearch { transition:all 0.2s }
+    #modelSearch:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(124,58,237,0.1) }
+    body.light #modelSearch { background:#fff; border-color:#e5e7eb; color:#111827 }
+    body.light #modelSearch:focus { border-color:var(--accent) }
+    .recommendedSection { margin-bottom:24px }
+    .recommendedSectionTitle { font-size:16px; font-weight:600; color:var(--fg); margin-bottom:12px; display:flex; align-items:center; gap:8px }
+    .recommendedSectionTitle::before { content:'⭐'; font-size:18px }
   </style>
 </head>
 <body>
@@ -140,7 +175,10 @@
       <div class="title">Local AI</div>
       <div class="sub">Private, offline-friendly</div>
       <div class="toolbar">
-        <select id="modelSel" class="nice"></select>
+        <button id="modelSelectorBtn" class="btn ghost" style="display:flex; align-items:center; gap:6px;">
+          <span id="currentModelName">Select Model</span>
+          <span style="font-size:10px;">▼</span>
+        </button>
         <button id="loadModel" class="load">Load</button>
         <span class="status" id="engineStatus">Engine: idle</span>
         <span class="badge" id="gpuWarn" style="display:none">WebGPU not available</span>
@@ -278,6 +316,33 @@
     </div>
   </div>
 
+  <!-- Model Selector Modal -->
+  <div id="modelSelectorModal" class="creditsModal">
+    <div class="creditsPanel" style="width:min(900px, 96vw); max-height:85vh;">
+      <div class="creditsHead">
+        <div>Select AI Model</div>
+        <button id="closeModelSelector" class="btn ghost">Close</button>
+      </div>
+      <div class="creditsBody" style="padding:0; display:flex; flex-direction:column; max-height:75vh;">
+        <div style="padding:16px; border-bottom:1px solid #1f2230; background:#0f1117;">
+          <input type="text" id="modelSearch" placeholder="🔍 Search models..." style="width:100%; padding:10px; border-radius:8px; border:1px solid #2a2d3a; background:#0b0c10; color:var(--fg); font-size:14px; outline:none;" />
+          <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
+            <button class="modelFilterBtn active" data-filter="all">All</button>
+            <button class="modelFilterBtn" data-filter="small">Small (Fast)</button>
+            <button class="modelFilterBtn" data-filter="medium">Medium</button>
+            <button class="modelFilterBtn" data-filter="large">Large (Quality)</button>
+            <button class="modelFilterBtn" data-filter="cached">Cached</button>
+            <button class="modelFilterBtn" data-filter="recommended">Recommended</button>
+          </div>
+        </div>
+        <div id="modelSelectorContent" style="flex:1; overflow:auto; padding:16px;">
+          <div id="recommendedModels" style="margin-bottom:24px;"></div>
+          <div id="allModelsGrid" class="downloadsGrid"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Credits Modal -->
   <div id="creditsModal" class="creditsModal">
     <div class="creditsPanel">
@@ -303,8 +368,17 @@
     const sendBtn = $('#send');
     const tempEl = $('#temp');
     const clearBtn = $('#clear');
-    const modelSel = $('#modelSel');
+    const modelSel = $('#modelSel'); // Keep for compatibility
     const loadBtn = $('#loadModel');
+    const modelSelectorBtn = $('#modelSelectorBtn');
+    const modelSelectorModal = $('#modelSelectorModal');
+    const closeModelSelector = $('#closeModelSelector');
+    const modelSearch = $('#modelSearch');
+    const currentModelName = $('#currentModelName');
+    const allModelsGrid = $('#allModelsGrid');
+    const recommendedModels = $('#recommendedModels');
+    let currentSelectedModel = null;
+    let allModelsList = [];
     const statusEl = $('#engineStatus');
     const gpuWarn = $('#gpuWarn');
     const progressWrap = $('#progressWrap');
@@ -555,9 +629,239 @@
     // --- WebLLM Engine ---
     function showProgress(show){ if (progressWrap) progressWrap.style.display = show ? 'flex' : 'none'; }
     function setProgress(pct, text){ if(progressBar){ progressBar.style.width = Math.max(0, Math.min(100, pct)) + '%'; } if(progressText){ progressText.textContent = Math.round(Math.max(0, Math.min(100, pct))) + '%'; } if (text && statusEl) statusEl.textContent = 'Engine: ' + text; }
+    function getModelRecommendations(list) {
+      const downloaded = getDownloadedSet();
+      const recommendations = [];
+      
+      // Recommend small cached models first
+      const smallCached = list.filter(m => {
+        const id = (m.model_id || '').toLowerCase();
+        return downloaded.has(m.model_id) && /0\.5b|1\.5b|1b|tiny|mini|small/i.test(id);
+      });
+      if (smallCached.length > 0) {
+        recommendations.push(...smallCached.slice(0, 2));
+      }
+      
+      // Recommend small uncached models
+      const smallUncached = list.filter(m => {
+        const id = (m.model_id || '').toLowerCase();
+        return !downloaded.has(m.model_id) && /0\.5b|1\.5b|1b|tiny|mini|small/i.test(id);
+      });
+      if (smallUncached.length > 0 && recommendations.length < 3) {
+        recommendations.push(...smallUncached.slice(0, 3 - recommendations.length));
+      }
+      
+      return recommendations.slice(0, 3);
+    }
+    
+    function createSmartModelCard(modelId, isRecommended = false) {
+      const card = document.createElement('div');
+      const sizeInfo = getModelSize(modelId);
+      const downloaded = getDownloadedSet().has(modelId);
+      const isSelected = currentSelectedModel === modelId;
+      
+      card.className = `modelCard ${isRecommended ? 'recommended' : ''} ${isSelected ? 'selected' : ''}`;
+      
+      const header = document.createElement('div');
+      header.className = 'modelCardHeader';
+      
+      const name = document.createElement('div');
+      name.className = 'modelCardName';
+      name.textContent = modelId;
+      name.title = modelId;
+      
+      header.appendChild(name);
+      
+      const meta = document.createElement('div');
+      meta.className = 'modelCardMeta';
+      
+      if (downloaded) {
+        const cachedBadge = document.createElement('span');
+        cachedBadge.className = 'modelBadge cached';
+        cachedBadge.textContent = '✓ Cached';
+        meta.appendChild(cachedBadge);
+      }
+      
+      const sizeBadge = document.createElement('span');
+      sizeBadge.className = `modelBadge ${sizeInfo.class}`;
+      sizeBadge.textContent = sizeInfo.size;
+      meta.appendChild(sizeBadge);
+      
+      const info = document.createElement('div');
+      info.className = 'modelCardInfo';
+      
+      // Speed indicator
+      const speedRow = document.createElement('div');
+      speedRow.className = 'modelCardInfoRow';
+      speedRow.innerHTML = `<span class="modelCardInfoIcon">⚡</span><span>${sizeInfo.class === 'small' ? 'Very Fast' : sizeInfo.class === 'medium' ? 'Fast' : 'Slower'}</span>`;
+      info.appendChild(speedRow);
+      
+      // Quality indicator
+      const qualityRow = document.createElement('div');
+      qualityRow.className = 'modelCardInfoRow';
+      qualityRow.innerHTML = `<span class="modelCardInfoIcon">🎯</span><span>${sizeInfo.class === 'small' ? 'Good' : sizeInfo.class === 'medium' ? 'Better' : 'Best'}</span>`;
+      info.appendChild(qualityRow);
+      
+      // Memory indicator
+      const memoryRow = document.createElement('div');
+      memoryRow.className = 'modelCardInfoRow';
+      const memText = sizeInfo.class === 'small' ? '<2GB' : sizeInfo.class === 'medium' ? '2-4GB' : '4GB+';
+      memoryRow.innerHTML = `<span class="modelCardInfoIcon">💾</span><span>${memText}</span>`;
+      info.appendChild(memoryRow);
+      
+      const actions = document.createElement('div');
+      actions.className = 'modelCardActions';
+      
+      const loadBtn = document.createElement('button');
+      loadBtn.className = 'modelCardBtn primary';
+      loadBtn.textContent = downloaded ? 'Load' : 'Download & Load';
+      loadBtn.onclick = (e) => {
+        e.stopPropagation();
+        currentSelectedModel = modelId;
+        if (modelSel) modelSel.value = modelId;
+        if (currentModelName) {
+          const shortName = modelId.length > 25 ? modelId.substring(0, 22) + '...' : modelId;
+          currentModelName.textContent = shortName;
+          currentModelName.title = modelId;
+        }
+        renderModelSelector();
+        loadSelectedModel();
+        if (modelSelectorModal) modelSelectorModal.style.display = 'none';
+      };
+      
+      const selectBtn = document.createElement('button');
+      selectBtn.className = 'modelCardBtn secondary';
+      selectBtn.textContent = isSelected ? 'Selected' : 'Select';
+      selectBtn.onclick = (e) => {
+        e.stopPropagation();
+        currentSelectedModel = modelId;
+        if (modelSel) modelSel.value = modelId;
+        if (currentModelName) {
+          const shortName = modelId.length > 25 ? modelId.substring(0, 22) + '...' : modelId;
+          currentModelName.textContent = shortName;
+          currentModelName.title = modelId;
+        }
+        renderModelSelector();
+      };
+      
+      actions.appendChild(loadBtn);
+      actions.appendChild(selectBtn);
+      
+      card.onclick = () => {
+        currentSelectedModel = modelId;
+        if (modelSel) modelSel.value = modelId;
+        if (currentModelName) {
+          const shortName = modelId.length > 25 ? modelId.substring(0, 22) + '...' : modelId;
+          currentModelName.textContent = shortName;
+          currentModelName.title = modelId;
+        }
+        renderModelSelector();
+      };
+      
+      card.appendChild(header);
+      card.appendChild(meta);
+      card.appendChild(info);
+      card.appendChild(actions);
+      
+      return card;
+    }
+    
+    function renderModelSelector() {
+      if (!allModelsGrid) return;
+      
+      try {
+        const list = allModelsList.length > 0 ? allModelsList : (webllm?.prebuiltAppConfig?.model_list) || [];
+        if (list.length === 0) {
+          allModelsGrid.innerHTML = '<div class="emptyState"><div class="emptyStateIcon">📦</div><div>Loading models...</div></div>';
+          return;
+        }
+        
+        const searchTerm = (modelSearch?.value || '').toLowerCase();
+        const activeFilter = document.querySelector('.modelFilterBtn.active')?.dataset?.filter || 'all';
+        const downloaded = getDownloadedSet();
+        
+        // Filter models
+        let filtered = list.filter(m => {
+          const id = (m.model_id || '').toLowerCase();
+          if (searchTerm && !id.includes(searchTerm)) return false;
+          
+          if (activeFilter === 'cached') return downloaded.has(m.model_id);
+          if (activeFilter === 'recommended') {
+            const recs = getModelRecommendations(list);
+            return recs.some(r => r.model_id === m.model_id);
+          }
+          if (activeFilter === 'small') {
+            return /0\.5b|1\.5b|1b|tiny|mini|small/i.test(id);
+          }
+          if (activeFilter === 'medium') {
+            return /2b|3b/i.test(id);
+          }
+          if (activeFilter === 'large') {
+            return /7b|8b|13b|14b/i.test(id);
+          }
+          return true;
+        });
+        
+        // Sort: recommended first, then cached, then by size
+        filtered.sort((a, b) => {
+          const recs = getModelRecommendations(list);
+          const aRec = recs.some(r => r.model_id === a.model_id);
+          const bRec = recs.some(r => r.model_id === b.model_id);
+          if (aRec && !bRec) return -1;
+          if (!aRec && bRec) return 1;
+          
+          const aCached = downloaded.has(a.model_id);
+          const bCached = downloaded.has(b.model_id);
+          if (aCached && !bCached) return -1;
+          if (!aCached && bCached) return 1;
+          
+          const aSize = getModelSize(a.model_id);
+          const bSize = getModelSize(b.model_id);
+          const sizeOrder = { small: 0, medium: 1, large: 2 };
+          return (sizeOrder[aSize.class] || 1) - (sizeOrder[bSize.class] || 1);
+        });
+        
+        allModelsGrid.innerHTML = '';
+        
+        if (filtered.length === 0) {
+          allModelsGrid.innerHTML = '<div class="emptyState"><div class="emptyStateIcon">🔍</div><div>No models found</div></div>';
+          return;
+        }
+        
+        filtered.forEach(rec => {
+          const recs = getModelRecommendations(list);
+          const isRecommended = recs.some(r => r.model_id === rec.model_id);
+          const card = createSmartModelCard(rec.model_id, isRecommended);
+          allModelsGrid.appendChild(card);
+        });
+        
+        // Render recommended section if showing all
+        if (activeFilter === 'all' || activeFilter === 'recommended') {
+          const recs = getModelRecommendations(list);
+          if (recs.length > 0 && !searchTerm) {
+            recommendedModels.innerHTML = '<div class="recommendedSection"><div class="recommendedSectionTitle">Recommended for You</div><div class="downloadsGrid" id="recommendedGrid"></div></div>';
+            const recGrid = $('#recommendedGrid');
+            if (recGrid) {
+              recs.forEach(r => {
+                const card = createSmartModelCard(r.model_id, true);
+                recGrid.appendChild(card);
+              });
+            }
+          } else {
+            recommendedModels.innerHTML = '';
+          }
+        } else {
+          recommendedModels.innerHTML = '';
+        }
+      } catch(e) {
+        log('renderModelSelector error: ' + (e?.message||e));
+      }
+    }
+    
     async function populateModels() {
       try {
         const list = (webllm?.prebuiltAppConfig?.model_list) || [];
+        allModelsList = list;
         modelSel.innerHTML = '';
         const isSimple = (simpleToggle ? simpleToggle.checked : (localStorage.getItem(LS_SIMPLE) === '1'));
         // In Simple mode, show only tiny/small models to reduce noise
@@ -577,7 +881,16 @@
         }
         let def = [...modelSel.options].find(o=>/qwen.*0\.5b/i.test(o.value))?.value || modelSel.options[0]?.value;
         if (lastChosenModel && [...modelSel.options].some(o=>o.value===lastChosenModel)) def = lastChosenModel;
-        if (def) modelSel.value = def;
+        if (def) {
+          modelSel.value = def;
+          currentSelectedModel = def;
+          if (currentModelName) {
+            const shortName = def.length > 25 ? def.substring(0, 22) + '...' : def;
+            currentModelName.textContent = shortName;
+            currentModelName.title = def;
+          }
+        }
+        renderModelSelector();
         log(`Models loaded (${filtered.length} shown of ${list.length} total). Default: ${modelSel.value}`);
       } catch(e){ log('Populate models failed: ' + (e?.message||e)); }
     }
@@ -613,10 +926,17 @@
         showProgress(false);
         localStorage.setItem(LS_MODEL, id);
         lastChosenModel = id;
+        currentSelectedModel = id;
+        if (currentModelName) {
+          const shortName = id.length > 25 ? id.substring(0, 22) + '...' : id;
+          currentModelName.textContent = shortName;
+          currentModelName.title = id;
+        }
         markDownloaded(id);
         renderAvailableModels();
         renderDownloads();
         updateModelBadges();
+        renderModelSelector();
         log('Model ready: ' + id);
       } catch(e){
         // Avoid noisy stack traces in console; provide friendly fallback
@@ -1455,6 +1775,40 @@
      sendBtn.onclick = onSend;
      clearBtn.onclick = () => { msgs.innerHTML=''; history = [ history[0] ]; saveChat(); input.focus(); log('Chat cleared'); };
      loadBtn.onclick = () => loadSelectedModel();
+     // Model selector handlers
+     if (modelSelectorBtn) {
+       modelSelectorBtn.onclick = () => {
+         if (modelSelectorModal) {
+           modelSelectorModal.style.display = 'grid';
+           renderModelSelector();
+           if (modelSearch) modelSearch.focus();
+         }
+       };
+     }
+     if (closeModelSelector) {
+       closeModelSelector.onclick = () => {
+         if (modelSelectorModal) modelSelectorModal.style.display = 'none';
+       };
+     }
+     if (modelSearch) {
+       modelSearch.addEventListener('input', () => renderModelSelector());
+     }
+     // Filter buttons
+     document.querySelectorAll('.modelFilterBtn').forEach(btn => {
+       btn.addEventListener('click', () => {
+         document.querySelectorAll('.modelFilterBtn').forEach(b => b.classList.remove('active'));
+         btn.classList.add('active');
+         renderModelSelector();
+       });
+     });
+     // Close modal on outside click
+     if (modelSelectorModal) {
+       modelSelectorModal.addEventListener('click', (e) => {
+         if (e.target === modelSelectorModal) {
+           modelSelectorModal.style.display = 'none';
+         }
+       });
+     }
      closeLogs.onclick = () => toggleLogs(false);
      clearLogs.onclick = () => { logs.length = 0; renderLogs(); log('Logs cleared'); };
      // Theme/accent and Credits handlers

@@ -91,6 +91,20 @@
     body.light #memModal .creditsBody textarea { background:#fff; color:#111827; border-color:#e5e7eb }
     body.light #sysModal .creditsBody textarea::placeholder,
     body.light #memModal .creditsBody textarea::placeholder { color:#6b7280 }
+    /* Model menu dropdown */
+    .modelMenu { position:relative; display:inline-flex; align-items:center }
+    .modelMenuBtn { background:transparent; color:var(--fg); border:1px solid #333; border-radius:10px; padding:6px 10px; cursor:pointer; font-size:12px; display:flex; align-items:center; gap:4px }
+    .modelMenuBtn:hover { background:#1f2937; border-color:#444 }
+    body.light .modelMenuBtn { border-color:#e5e7eb }
+    body.light .modelMenuBtn:hover { background:#e5e7eb }
+    .modelMenuDropdown { position:absolute; bottom:100%; right:0; margin-bottom:8px; background:#0b0c10; border:1px solid #2a2d3a; border-radius:8px; min-width:160px; box-shadow:0 4px 12px rgba(0,0,0,.4); z-index:100; display:none; overflow:hidden }
+    .modelMenuDropdown.show { display:block }
+    body.light .modelMenuDropdown { background:#ffffff; border-color:#e5e7eb }
+    .modelMenuItem { display:block; width:100%; padding:10px 12px; color:var(--fg); text-align:left; border:none; background:transparent; cursor:pointer; font-size:13px; border-bottom:1px solid #1f2230 }
+    .modelMenuItem:last-child { border-bottom:none }
+    .modelMenuItem:hover { background:#1f2937 }
+    body.light .modelMenuItem { border-bottom-color:#e5e7eb }
+    body.light .modelMenuItem:hover { background:#f3f4f6 }
   </style>
 </head>
 <body>
@@ -140,6 +154,16 @@
         <button id="queue" class="btn ghost">Queue</button>
         <button id="stop" class="btn ghost">Stop</button>
         <span id="tokStats" class="badge">Tokens: <span id="tokCount">0</span> • TPS: <span id="tpsAvg">0</span></span>
+        <div class="modelMenu">
+          <button id="modelMenuBtn" class="modelMenuBtn" title="Model import/export">
+            <span>☰</span>
+          </button>
+          <div id="modelMenuDropdown" class="modelMenuDropdown">
+            <button class="modelMenuItem" id="quickExportBtn">Export Model</button>
+            <button class="modelMenuItem" id="quickImportBtn">Import Model</button>
+          </div>
+        </div>
+        <input type="file" id="quickImportModelFile" accept=".zip" style="display:none" />
       </div>
     </div>
   </div>
@@ -984,6 +1008,45 @@
      if (exportModelBtn) exportModelBtn.onclick = () => exportModel();
      if (importModelBtn) importModelBtn.onclick = () => importModel();
      if (importModelFile) importModelFile.addEventListener('change', (e) => {
+       const file = e.target.files?.[0];
+       if (file) importModel(file);
+       e.target.value = ''; // Reset input
+     });
+     // Quick menu handlers (next to tokens/TPS)
+     const modelMenuBtn = $('#modelMenuBtn');
+     const modelMenuDropdown = $('#modelMenuDropdown');
+     const quickExportBtn = $('#quickExportBtn');
+     const quickImportBtn = $('#quickImportBtn');
+     const quickImportModelFile = $('#quickImportModelFile');
+     if (modelMenuBtn && modelMenuDropdown) {
+       modelMenuBtn.onclick = (e) => {
+         e.stopPropagation();
+         modelMenuDropdown.classList.toggle('show');
+       };
+       // Close dropdown when clicking outside (only add once)
+       if (!document.modelMenuClickHandlerAdded) {
+         const clickOutsideHandler = (e) => {
+           const dropdown = $('#modelMenuDropdown');
+           const btn = $('#modelMenuBtn');
+           if (dropdown && dropdown.classList.contains('show')) {
+             if (!dropdown.contains(e.target) && !btn.contains(e.target)) {
+               dropdown.classList.remove('show');
+             }
+           }
+         };
+         document.addEventListener('click', clickOutsideHandler);
+         document.modelMenuClickHandlerAdded = true;
+       }
+     }
+     if (quickExportBtn) quickExportBtn.onclick = () => {
+       if (modelMenuDropdown) modelMenuDropdown.classList.remove('show');
+       exportModel();
+     };
+     if (quickImportBtn) quickImportBtn.onclick = () => {
+       if (modelMenuDropdown) modelMenuDropdown.classList.remove('show');
+       if (quickImportModelFile) quickImportModelFile.click();
+     };
+     if (quickImportModelFile) quickImportModelFile.addEventListener('change', (e) => {
        const file = e.target.files?.[0];
        if (file) importModel(file);
        e.target.value = ''; // Reset input

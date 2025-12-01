@@ -116,6 +116,7 @@
         </select>
         <button id="systemBtn" class="btn ghost">System</button>
         <button id="memoryBtn" class="btn ghost">Memory</button>
+        <button id="downloadsLogsBtn" class="btn ghost">Downloads & Logs</button>
         <button id="creditsBtn" class="btn ghost">Credits</button>
         <button id="themeToggle" class="btn ghost">Theme: Dark</button>
         <input id="accentPicker" type="color" value="#7c3aed" title="Accent color" class="badge accentPreview" style="height:28px;width:36px;padding:0;border-radius:8px" />
@@ -679,9 +680,21 @@
            log('Export failed: JSZip not available');
            return;
          }
+         if (!indexedDB || !indexedDB.databases) {
+           add('bot', 'IndexedDB not available. Cannot export model data.');
+           log('Export failed: IndexedDB.databases() not supported');
+           return;
+         }
          const zip = new JSZip();
          // Get all IndexedDB databases - WebLLM stores models in databases with mlc prefix
-         const dbs = await indexedDB.databases();
+         let dbs = [];
+         try {
+           dbs = await indexedDB.databases();
+         } catch(e) {
+           add('bot', 'Failed to access IndexedDB. Please check browser permissions.');
+           log('Export failed: Cannot access IndexedDB - ' + (e?.message||e));
+           return;
+         }
          // Filter for WebLLM-related databases (they typically start with 'mlc' or contain 'webllm')
          // We export all WebLLM databases since they may contain the model data
          const modelDbs = dbs.filter(db => {
@@ -743,10 +756,18 @@
      
      async function exportIndexedDB(dbName) {
        return new Promise((resolve, reject) => {
+         if (!dbName || typeof dbName !== 'string') {
+           reject(new Error('Invalid database name'));
+           return;
+         }
          const request = indexedDB.open(dbName);
          request.onerror = () => reject(new Error(`Failed to open database: ${dbName}`));
          request.onsuccess = () => {
            const db = request.result;
+           if (!db) {
+             reject(new Error(`Database ${dbName} is null`));
+             return;
+           }
            const data = {};
            const objectStoreNames = db.objectStoreNames;
            let completed = 0;
@@ -756,27 +777,61 @@
              db.close();
              return;
            }
+           let hasError = false;
            for (const storeName of objectStoreNames) {
-             const transaction = db.transaction([storeName], 'readonly');
-             const store = transaction.objectStore(storeName);
-             const allRequest = store.getAll();
-             allRequest.onsuccess = () => {
-               data[storeName] = allRequest.result;
+             try {
+               const transaction = db.transaction([storeName], 'readonly');
+               const store = transaction.objectStore(storeName);
+               const allRequest = store.getAll();
+               allRequest.onsuccess = () => {
+                 try {
+                   data[storeName] = allRequest.result || [];
+                   completed++;
+                   if (completed === total) {
+                     resolve(data);
+                     db.close();
+                   }
+                 } catch(e) {
+                   log(`Error processing store ${storeName}: ${e.message}`);
+                   data[storeName] = [];
+                   completed++;
+                   if (completed === total) {
+                     resolve(data);
+                     db.close();
+                   }
+                 }
+               };
+               allRequest.onerror = () => {
+                 log(`Error reading store ${storeName}: ${allRequest.error}`);
+                 data[storeName] = [];
+                 completed++;
+                 if (completed === total) {
+                   resolve(data);
+                   db.close();
+                 }
+               };
+               transaction.onerror = () => {
+                 log(`Transaction error for store ${storeName}: ${transaction.error}`);
+                 data[storeName] = [];
+                 completed++;
+                 if (completed === total) {
+                   resolve(data);
+                   db.close();
+                 }
+               };
+             } catch(e) {
+               log(`Error accessing store ${storeName}: ${e.message}`);
+               data[storeName] = [];
                completed++;
                if (completed === total) {
                  resolve(data);
                  db.close();
                }
-             };
-             allRequest.onerror = () => {
-               log(`Error reading store ${storeName}: ${allRequest.error}`);
-               completed++;
-               if (completed === total) {
-                 resolve(data);
-                 db.close();
-               }
-             };
+             }
            }
+         };
+         request.onblocked = () => {
+           log(`Database ${dbName} is blocked, waiting...`);
          };
        });
      }
@@ -787,6 +842,12 @@
          if (input) input.click();
          return;
        }
+       // Validate file type
+       if (!file.name.toLowerCase().endsWith('.zip')) {
+         add('bot', 'Invalid file type. Please select a .zip file.');
+         log('Import failed: Invalid file type');
+         return;
+       }
        log(`Starting import of model from: ${file.name}`);
        try {
          if (typeof JSZip === 'undefined') {
@@ -794,7 +855,19 @@
            log('Import failed: JSZip not available');
            return;
          }
-         const zip = await JSZip.loadAsync(file);
+         if (!indexedDB) {
+           add('bot', 'IndexedDB not available. Cannot import model data.');
+           log('Import failed: IndexedDB not supported');
+           return;
+         }
+         let zip;
+         try {
+           zip = await JSZip.loadAsync(file);
+         } catch(e) {
+           add('bot', 'Failed to read ZIP file. The file may be corrupted.');
+           log('Import failed: Cannot read ZIP - ' + (e?.message||e));
+           return;
+         }
          // Read metadata
          const metadataFile = zip.file('metadata.json');
          if (!metadataFile) {
@@ -802,36 +875,73 @@
            log('Import failed: Missing metadata');
            return;
          }
-         const metadata = JSON.parse(await metadataFile.async('string'));
-         const modelId = metadata.modelId;
-         if (!modelId) {
-           add('bot', 'Invalid model file: model ID not found.');
-           log('Import failed: Missing model ID');
+         let metadata;
+         try {
+           metadata = JSON.parse(await metadataFile.async('string'));
+         } catch(e) {
+           add('bot', 'Invalid model file: metadata.json is corrupted.');
+           log('Import failed: Cannot parse metadata - ' + (e?.message||e));
+           return;
+         }
+         const modelId = metadata?.modelId;
+         if (!modelId || typeof modelId !== 'string') {
+           add('bot', 'Invalid model file: model ID not found or invalid.');
+           log('Import failed: Missing or invalid model ID');
            return;
          }
          log(`Importing model: ${modelId}`);
          // Import databases
          const dbFolder = zip.folder('databases');
-         if (!dbFolder) {
-           add('bot', 'Invalid model file: databases folder not found.');
-           log('Import failed: Missing databases folder');
+         if (!dbFolder || Object.keys(dbFolder.files).length === 0) {
+           add('bot', 'Invalid model file: databases folder not found or empty.');
+           log('Import failed: Missing or empty databases folder');
            return;
          }
          let importedCount = 0;
+         let errorCount = 0;
          for (const [path, entry] of Object.entries(dbFolder.files)) {
            if (entry.dir) continue;
-           const dbName = path.replace('.json', '');
-           log(`Importing database: ${dbName}`);
-           const dbData = JSON.parse(await entry.async('string'));
-           await importIndexedDB(dbName, dbData);
-           importedCount++;
+           const dbName = path.replace('.json', '').replace('databases/', '');
+           if (!dbName) {
+             log(`Skipping invalid database path: ${path}`);
+             continue;
+           }
+           try {
+             log(`Importing database: ${dbName}`);
+             let dbData;
+             try {
+               dbData = JSON.parse(await entry.async('string'));
+             } catch(e) {
+               log(`Error parsing database ${dbName}: ${e.message}`);
+               errorCount++;
+               continue;
+             }
+             if (!dbData || typeof dbData !== 'object') {
+               log(`Invalid database data for ${dbName}`);
+               errorCount++;
+               continue;
+             }
+             await importIndexedDB(dbName, dbData);
+             importedCount++;
+           } catch(e) {
+             log(`Error importing database ${dbName}: ${e.message}`);
+             errorCount++;
+           }
+         }
+         if (importedCount === 0) {
+           add('bot', 'Import failed: No databases could be imported.');
+           log(`Import failed: ${errorCount} error(s), 0 successful imports`);
+           return;
          }
          // Mark model as downloaded
          markDownloaded(modelId);
          renderDownloads();
          updateModelBadges();
-         add('bot', `Model ${modelId} imported successfully! ${importedCount} database(s) restored.`);
-         log(`Import completed: ${modelId} (${importedCount} databases)`);
+         const msg = errorCount > 0 
+           ? `Model ${modelId} imported with warnings: ${importedCount} database(s) restored, ${errorCount} error(s).`
+           : `Model ${modelId} imported successfully! ${importedCount} database(s) restored.`;
+         add('bot', msg);
+         log(`Import completed: ${modelId} (${importedCount} databases, ${errorCount} errors)`);
        } catch(e) {
          add('bot', `Import failed: ${e.message}`);
          log('Import error: ' + (e?.message||e));
@@ -840,6 +950,14 @@
      
      async function importIndexedDB(dbName, data) {
        return new Promise((resolve, reject) => {
+         if (!dbName || typeof dbName !== 'string') {
+           reject(new Error('Invalid database name'));
+           return;
+         }
+         if (!data || typeof data !== 'object' || Array.isArray(data)) {
+           reject(new Error('Invalid database data'));
+           return;
+         }
          // Delete existing database if it exists
          const deleteRequest = indexedDB.deleteDatabase(dbName);
          deleteRequest.onsuccess = deleteRequest.onerror = () => {
@@ -999,6 +1117,8 @@
      if (themeToggle) themeToggle.onclick = () => { document.body.classList.toggle('light'); themeToggle.textContent = 'Theme: ' + (document.body.classList.contains('light') ? 'Light' : 'Dark'); saveSettings(); };
      if (accentPicker) accentPicker.addEventListener('input', ()=>{ document.documentElement.style.setProperty('--accent', accentPicker.value); saveSettings(); });
      if (langSel) langSel.addEventListener('change', ()=>{ saveSettings(); });
+     const downloadsLogsBtn = $('#downloadsLogsBtn');
+     if (downloadsLogsBtn) downloadsLogsBtn.onclick = () => toggleLogs();
      if (creditsBtn) creditsBtn.onclick = ()=> { const modal = document.getElementById('creditsModal'); if (modal) modal.style.display = 'grid'; };
      if (closeCredits) closeCredits.onclick = ()=> { const modal = document.getElementById('creditsModal'); if (modal) modal.style.display = 'none'; };
      // System Prompt modal handlers
